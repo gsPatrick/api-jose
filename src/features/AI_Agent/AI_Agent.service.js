@@ -16,29 +16,12 @@ class AIAgentService {
             let currentState = client.conversation_stage || 'START';
             const input = textInput.trim();
 
-            const MENU_OBJECT = {
-                listMessage: {
-                    title: "LegalFarm AI",
-                    description: "Olá! Sou seu assistente jurídico rural. Escolha uma opção abaixo para começarmos:",
-                    buttonText: "Ver Opções",
-                    sections: [
-                        {
-                            title: "Análise Rural",
-                            rows: [
-                                { rowId: "1", title: "Risco Climático/Safra", description: "Avaliar perdas e frustração de safra" },
-                                { rowId: "2", title: "Análise de Dívidas", description: "Simular capacidade de pagamento" }
-                            ]
-                        },
-                        {
-                            title: "Jurídico & Geral",
-                            rows: [
-                                { rowId: "3", title: "Assistente Jurídico", description: "Tirar dúvidas sobre legislação" },
-                                { rowId: "9", title: "Outras Dúvidas", description: "Chat livre com IA" }
-                            ]
-                        }
-                    ]
-                }
-            };
+            const MENU_TEXT = `Bem-vindo ao *LegalFarm AI* 🌾\n\nSou seu assistente jurídico rural. Escolha uma opção abaixo para começarmos:\n\n` +
+                `1️⃣ *Análise de Risco Climático/Safra*\n(Avaliar perdas e frustração de safra)\n\n` +
+                `2️⃣ *Análise de Dívidas*\n(Simular capacidade de pagamento)\n\n` +
+                `3️⃣ *Assistente Jurídico*\n(Tirar dúvidas sobre legislação)\n\n` +
+                `9️⃣ *Outras Dúvidas*\n(Chat livre com IA)\n\n` +
+                `_Digite apenas o número da opção desejada._`;
 
             // --- RESET TRIGGER ---
             // If user says "Menu", "Inicio", "Oi" (and isn't in middle of form) -> Reset to Menu
@@ -50,9 +33,9 @@ class AIAgentService {
             // --- STATE: START / MENU ---
             if (currentState === 'START' && !['1', '2', '3', '9'].includes(input)) {
                 // If checking for START, we almost ALWAYS show menu, unless input is a direct option
-                console.log(`State is START. Showing Menu.`);
+                console.log(`State is START. Showing Text Menu.`);
                 await client.update({ conversation_stage: 'MENU_SHOWN' });
-                return MENU_OBJECT;
+                return MENU_TEXT;
             }
 
             // --- OPTION SELECTION ---

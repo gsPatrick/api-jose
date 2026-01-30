@@ -178,11 +178,10 @@ class UazapiService {
                     await this.sendMessage(phone, responseText);
                 }
             }
+        } catch (error) {
+            console.error("Error processing Uazapi webhook:", error);
         }
-        } catch(error) {
-        console.error("Error processing Uazapi webhook:", error);
     }
-}
 
 // Helper for image response
 function jsonToFriendlyText(data) {

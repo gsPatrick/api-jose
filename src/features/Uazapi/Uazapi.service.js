@@ -37,6 +37,7 @@ class UazapiService {
             const response = await axios.post(`${this.baseUrl}/send/text`, payload, {
                 headers: {
                     'token': this.token,
+                    'apikey': this.token, // Some Uazapi versions require apikey instead of token
                     'Content-Type': 'application/json'
                 }
             });

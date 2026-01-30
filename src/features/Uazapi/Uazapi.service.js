@@ -182,6 +182,8 @@ class UazapiService {
             console.error("Error processing Uazapi webhook:", error);
         }
     }
+}
+}
 
 // Helper for image response
 function jsonToFriendlyText(data) {

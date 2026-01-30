@@ -9,8 +9,12 @@ class UazapiService {
         this.subdomain = process.env.UAZAPI_SUBDOMAIN || 'api';
         this.token = process.env.UAZAPI_TOKEN;
 
-        // Base URL: https://{subdomain}.uazapi.com
-        this.baseUrl = `https://${this.subdomain}.uazapi.com`;
+        // If subdomain is full URL, use it directly. Otherwise construct it.
+        if (this.subdomain.startsWith('http')) {
+            this.baseUrl = this.subdomain;
+        } else {
+            this.baseUrl = `https://${this.subdomain}.uazapi.com`;
+        }
     }
 
     /**

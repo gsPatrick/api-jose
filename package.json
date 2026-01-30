@@ -5,7 +5,8 @@
   "main": "App.js",
   "scripts": {
     "start": "node App.js",
-    "dev": "nodemon App.js"
+    "dev": "nodemon App.js",
+    "seed": "node scripts/seed.js"
   },
   "dependencies": {
     "axios": "^1.6.5",

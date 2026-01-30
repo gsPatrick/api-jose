@@ -21,23 +21,29 @@ class UazapiService {
      * Sends a text message via Uazapi
      * Endpoint: POST /send/text
      */
-    async sendMessage(phone, text) {
+    async sendMessage(phone, content) {
         try {
             if (!this.token) {
                 console.error("Uazapi Token not configured.");
                 return;
             }
 
+            // If content is an object with 'listMessage', use sendListMessage instead
+            if (typeof content === 'object' && content.listMessage) {
+                return await this.sendListMessage(phone, content.listMessage);
+            }
+
+            // Default Text Message
             const payload = {
                 number: phone,
-                text: text,
-                linkPreview: true // Optional as per docs
+                text: typeof content === 'string' ? content : JSON.stringify(content),
+                linkPreview: true
             };
 
             const response = await axios.post(`${this.baseUrl}/send/text`, payload, {
                 headers: {
                     'token': this.token,
-                    'apikey': this.token, // Some Uazapi versions require apikey instead of token
+                    'apikey': this.token,
                     'Content-Type': 'application/json'
                 }
             });
@@ -45,6 +51,35 @@ class UazapiService {
             console.log(`Message sent to ${phone} via Uazapi. ID: ${response.data?.messageId || 'unknown'}`);
         } catch (error) {
             console.error("Error sending Uazapi message:", error.response?.data || error.message);
+        }
+    }
+
+    /**
+     * Sends a List Message (Menu) via Uazapi
+     * Endpoint: POST /send/list
+     */
+    async sendListMessage(phone, listData) {
+        try {
+            const payload = {
+                number: phone,
+                title: listData.title,
+                description: listData.description,
+                buttonText: listData.buttonText || "Abrir Menu",
+                sections: listData.sections
+            };
+
+            const response = await axios.post(`${this.baseUrl}/send/list`, payload, {
+                headers: {
+                    'token': this.token,
+                    'apikey': this.token,
+                    'Content-Type': 'application/json'
+                }
+            });
+            console.log(`List Message sent to ${phone}. ID: ${response.data?.messageId || 'unknown'}`);
+        } catch (error) {
+            console.error("Error sending List Message:", error.response?.data || error.message);
+            // Fallback to text if List fails (optional resilience)
+            await this.sendMessage(phone, `${listData.title}\n${listData.description}\n\n(Digite o número da opção desejada)`);
         }
     }
 

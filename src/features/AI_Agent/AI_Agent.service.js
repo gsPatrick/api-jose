@@ -11,18 +11,33 @@ class AIAgentService {
             // Normalizing Input
             const input = textInput.trim();
 
-            const MENU_TEXT = `Bem-vindo ao *LegalFarm AI*. Escolha o que deseja analisar:\n\n` +
-                `1️⃣ Análise de Risco Climático/Safra\n` +
-                `2️⃣ Análise de Dívidas e Capacidade de Pagamento\n` +
-                `3️⃣ Falar com Advogado (Assistente IA)\n` +
-                `9️⃣ Outras Dúvidas (Chat Livre)\n\n` +
-                `_Digite o número da opção desejada._`;
-
             // --- MENU LOGIC ---
 
             // If user says "Oi", "Ola", "Menu", "Inicio" -> Show Menu
             if (['oi', 'olá', 'ola', 'menu', 'inicio', 'início', 'ajuda'].includes(input.toLowerCase())) {
-                return MENU_TEXT;
+                return {
+                    listMessage: {
+                        title: "LegalFarm AI",
+                        description: "Olá! Sou seu assistente jurídico rural. Escolha uma opção abaixo para começarmos:",
+                        buttonText: "Ver Opções",
+                        sections: [
+                            {
+                                title: "Análise Rural",
+                                rows: [
+                                    { rowId: "1", title: "Risco Climático/Safra", description: "Avaliar perdas e frustração de safra" },
+                                    { rowId: "2", title: "Análise de Dívidas", description: "Simular capacidade de pagamento" }
+                                ]
+                            },
+                            {
+                                title: "Jurídico & Geral",
+                                rows: [
+                                    { rowId: "3", title: "Assistente Jurídico", description: "Tirar dúvidas sobre legislação" },
+                                    { rowId: "9", title: "Outras Dúvidas", description: "Chat livre com IA" }
+                                ]
+                            }
+                        ]
+                    }
+                };
             }
 
             // Option 1: Climate Risk (Simplified for this version)

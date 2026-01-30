@@ -118,25 +118,36 @@ class UazapiService {
             // Ensure client exists
             await ClientService.findOrCreateClient(phone);
 
-            // Determine Message Type
-            const messageType = messageData.type; // 'text', 'image', 'audio', etc.
+            // Determine Message Type - checking multiple fields for resilience across versions
+            const type = messageData.type; // 'text' OR 'media'
+            const mediaType = messageData.mediaType; // 'ptt', 'image'
 
             // --- TEXT MESSAGE ---
-            if (messageType === 'text') {
-                const textContent = messageData.text || messageData.content;
+            if (type === 'text' || (type === 'extended' && messageData.text)) {
+                const textContent = messageData.text || messageData.content; // Content is usually string for text
 
-                if (textContent) {
-                    console.log(`Received text from ${phone}: ${textContent}`);
-                    const aiResponse = await AIAgentService.generateResponse(phone, textContent);
+                // If content is an object (common in some libs), try extracting text property
+                const finalText = typeof textContent === 'object' ? textContent.text : textContent;
+
+                if (finalText) {
+                    console.log(`Received text from ${phone}: ${finalText}`);
+                    const aiResponse = await AIAgentService.generateResponse(phone, finalText);
                     await this.sendMessage(phone, aiResponse);
                 }
             }
 
             // --- AUDIO MESSAGE ---
-            else if (messageType === 'audio' || messageType === 'ptt') {
-                // In UazapiGO, mediaUrl might be in different fields depending on version/config
-                // Checking common candidates
-                const audioUrl = messageData.mediaUrl || messageData.url || messageData.file;
+            else if (mediaType === 'audio' || mediaType === 'ptt' || type === 'audio') {
+                // Audio URL location varies.
+                // Log shows: content: { URL: "..." }
+                let audioUrl = null;
+
+                if (messageData.content && messageData.content.URL) {
+                    audioUrl = messageData.content.URL;
+                } else {
+                    // Fallback to older fields
+                    audioUrl = messageData.mediaUrl || messageData.url || messageData.file;
+                }
 
                 if (audioUrl) {
                     console.log(`Received audio from ${phone}: ${audioUrl}`);
@@ -145,13 +156,19 @@ class UazapiService {
                     const aiResponse = await AIAgentService.generateResponse(phone, transcription);
                     await this.sendMessage(phone, aiResponse);
                 } else {
-                    console.warn(`Audio received from ${phone} but no URL found in payload.`);
+                    console.warn(`Audio received from ${phone} but no URL found in payload properties.`);
                 }
             }
 
             // --- IMAGE MESSAGE (OCR) ---
-            else if (messageType === 'image') {
-                const imageUrl = messageData.mediaUrl || messageData.url || messageData.file;
+            else if (mediaType === 'image' || type === 'image') {
+                let imageUrl = null;
+
+                if (messageData.content && messageData.content.URL) {
+                    imageUrl = messageData.content.URL;
+                } else {
+                    imageUrl = messageData.mediaUrl || messageData.url || messageData.file;
+                }
 
                 if (imageUrl) {
                     console.log(`Received image from ${phone}: ${imageUrl}`);
@@ -161,11 +178,7 @@ class UazapiService {
                     await this.sendMessage(phone, responseText);
                 }
             }
-
-        } catch (error) {
-            console.error("Error processing Uazapi webhook:", error);
         }
-    }
 }
 
 // Helper for image response

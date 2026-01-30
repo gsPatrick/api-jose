@@ -122,7 +122,7 @@ function processInmetData(rawData) {
 }
 
 /**
- * Obtém dados INMET dos últimos N dias
+ * Obtém dados climáticos (Tenta INMET, se falhar ou vazio, tenta NASA)
  */
 async function getInmetData(latitude, longitude, days = 7) {
     // Validações
@@ -130,39 +130,61 @@ async function getInmetData(latitude, longitude, days = 7) {
         throw new Error('Parâmetro "days" deve estar entre 1 e 90');
     }
 
-    // Buscar estação mais próxima
-    const station = await findNearestInmetStation(latitude, longitude);
-
-    if (!station) {
-        throw new Error('Nenhuma estação INMET encontrada');
-    }
-
     // Calcular período
     const endDate = new Date();
     const startDate = subDays(endDate, days);
-
     const startStr = format(startDate, 'yyyy-MM-dd');
     const endStr = format(endDate, 'yyyy-MM-dd');
 
-    // Buscar dados
-    const url = `${config.inmet.baseURL}/estacao/${startStr}/${endStr}/${station.code}`;
+    // 1. TENTATIVA INMET
+    try {
+        const station = await findNearestInmetStation(latitude, longitude);
 
-    const response = await axios.get(url, {
-        timeout: config.inmet.timeout
-    });
+        if (station) {
+            const url = `${config.inmet.baseURL}/estacao/${startStr}/${endStr}/${station.code}`;
+            const response = await axios.get(url, { timeout: config.inmet.timeout });
 
-    // Processar dados (agrupar por dia)
-    const processedData = processInmetData(response.data);
+            const processedData = processInmetData(response.data);
 
-    return {
-        station,
-        data: processedData,
-        metadata: {
-            source: 'INMET',
-            period: { start: startStr, end: endStr },
-            dataPoints: response.data.length
+            if (processedData && processedData.length > 0) {
+                return {
+                    station,
+                    data: processedData,
+                    metadata: {
+                        source: 'INMET',
+                        period: { start: startStr, end: endStr },
+                        dataPoints: response.data.length
+                    }
+                };
+            }
+            console.warn(`INMET station ${station.code} returned no data. Falling back to NASA POWER.`);
         }
-    };
+    } catch (error) {
+        console.warn(`INMET API failed: ${error.message}. Falling back to NASA POWER.`);
+    }
+
+    // 2. TENTATIVA NASA POWER (Fallback)
+    try {
+        const startNasa = format(startDate, 'yyyyMMdd');
+        const endNasa = format(endDate, 'yyyyMMdd');
+
+        console.log(`Fetching data from NASA POWER for ${latitude}, ${longitude}`);
+        const nasaData = await getNasaPowerData(latitude, longitude, startNasa, endNasa);
+
+        return {
+            station: { name: 'NASA Satellite', code: 'NASA_POWER', distance: 0 },
+            data: nasaData.data,
+            metadata: {
+                source: 'NASA POWER',
+                warning: 'INMET indisponível ou sem dados. Usando dados de satélite.',
+                period: { start: startStr, end: endStr }
+            }
+        };
+
+    } catch (nasaError) {
+        console.error("Critical: Both INMET and NASA APIs failed.", nasaError);
+        throw new Error("Não foi possível obter dados climáticos de nenhuma fonte.");
+    }
 }
 
 /**

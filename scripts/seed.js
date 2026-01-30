@@ -11,11 +11,16 @@ async function generateEmbedding(text) {
         console.warn("⚠️  OPENAI_API_KEY not found. Using mock embeddings (zeros).");
         return new Array(1536).fill(0);
     }
-    const response = await openai.embeddings.create({
-        model: "text-embedding-3-small",
-        input: text,
-    });
-    return response.data[0].embedding;
+    try {
+        const response = await openai.embeddings.create({
+            model: "text-embedding-3-small",
+            input: text,
+        });
+        return response.data[0].embedding;
+    } catch (error) {
+        console.warn(`⚠️  OpenAI Error (${error.code || 'Unknown'}). Using mock embeddings (zeros) to proceed with seeding.`);
+        return new Array(1536).fill(0);
+    }
 }
 
 const mockChunks = [

@@ -126,28 +126,28 @@ class AIAgentService {
                 await client.update({ conversation_stage: 'CLIMATE_DISCUSSION' });
             }
 
-        }
+
 
             // --- STATE: WAITING_FINANCE_DATA (User sent "200k em 60") ---
             if (currentState === 'WAITING_FINANCE_DATA') {
-            console.log(`Analyzing financial request: ${textInput}`);
+                console.log(`Analyzing financial request: ${textInput}`);
 
-            // Import BacenService dynamically
-            const BacenService = require('../External_Context/Bacen/Bacen.service');
+                // Import BacenService dynamically
+                const BacenService = require('../External_Context/Bacen/Bacen.service');
 
-            // Get Official Rates from Bacen
-            let ratesContext = "Taxas indisponíveis no momento.";
-            try {
-                const rates = await BacenService.obterTaxasCreditoRuralAtuais();
-                if (rates) {
-                    ratesContext = JSON.stringify(rates, null, 2);
+                // Get Official Rates from Bacen
+                let ratesContext = "Taxas indisponíveis no momento.";
+                try {
+                    const rates = await BacenService.obterTaxasCreditoRuralAtuais();
+                    if (rates) {
+                        ratesContext = JSON.stringify(rates, null, 2);
+                    }
+                } catch (err) {
+                    console.error("Failed to fetch Bacen rates:", err.message);
                 }
-            } catch (err) {
-                console.error("Failed to fetch Bacen rates:", err.message);
-            }
 
-            // Add this data to RAG/Context
-            const promptContext = `
+                // Add this data to RAG/Context
+                const promptContext = `
                  O usuário quer simular: "${textInput}".
                  
                  DADOS OFICIAIS DE CRÉDITO RURAL (BACEN):
@@ -156,31 +156,31 @@ class AIAgentService {
                  Instrução: Faça uma simulação financeira (Tabela Price) usando as taxas acima se aplicável ao contexto.
                  `;
 
-            // Now continue to LLM Generation with this context
-            textInput = `${promptContext}\n\nFaça a simulação financeira solicitada.`;
+                // Now continue to LLM Generation with this context
+                textInput = `${promptContext}\n\nFaça a simulação financeira solicitada.`;
 
-            // Update state to allow follow-up
-            await client.update({ conversation_stage: 'FINANCE_DISCUSSION' });
-        }
+                // Update state to allow follow-up
+                await client.update({ conversation_stage: 'FINANCE_DISCUSSION' });
+            }
 
-        // --- RAG FLOW (Existing Logic) ---
+            // --- RAG FLOW (Existing Logic) ---
 
-        // 1. Generate Embedding
-        const embedding = await RAGService.generateEmbedding(textInput);
+            // 1. Generate Embedding
+            const embedding = await RAGService.generateEmbedding(textInput);
 
-        // 2. Search Chunks (RAG)
-        const chunks = await RAGService.searchChunks(embedding);
+            // 2. Search Chunks (RAG)
+            const chunks = await RAGService.searchChunks(embedding);
 
-        // If no relevant chunks found (basic threshold check via empty array if service implements it, or fallback)
-        // For now assuming service always returns arrays.
+            // If no relevant chunks found (basic threshold check via empty array if service implements it, or fallback)
+            // For now assuming service always returns arrays.
 
-        // Format chunks for context
-        const contextText = chunks.map(c =>
-            `[Source: ${c.source}, DocID: ${c.doc_id}, ChunkID: ${c.chunk_id}]: ${c.text}`
-        ).join('\n\n');
+            // Format chunks for context
+            const contextText = chunks.map(c =>
+                `[Source: ${c.source}, DocID: ${c.doc_id}, ChunkID: ${c.chunk_id}]: ${c.text}`
+            ).join('\n\n');
 
-        // 3. Construct Prompt
-        const systemPrompt = `
+            // 3. Construct Prompt
+            const systemPrompt = `
             Você é um assistente jurídico/financeiro especializado em Crédito Rural (LegalFarm AI).
             Sua missão é responder com base ESTRITAMENTE no contexto fornecido abaixo.
             
@@ -202,35 +202,35 @@ class AIAgentService {
             ${contextText}
             `;
 
-        // 4. Call LLM
-        const completion = await openai.chat.completions.create({
-            model: "gpt-4o-mini", // Using 'mini' as requested for cost/speed
-            messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: textInput }
-            ],
-            response_format: { type: "json_object" },
-            temperature: 0.1 // Low temp for factual accuracy
-        });
+            // 4. Call LLM
+            const completion = await openai.chat.completions.create({
+                model: "gpt-4o-mini", // Using 'mini' as requested for cost/speed
+                messages: [
+                    { role: "system", content: systemPrompt },
+                    { role: "user", content: textInput }
+                ],
+                response_format: { type: "json_object" },
+                temperature: 0.1 // Low temp for factual accuracy
+            });
 
-        const responseContent = completion.choices[0].message.content;
-        const parsedResponse = JSON.parse(responseContent);
+            const responseContent = completion.choices[0].message.content;
+            const parsedResponse = JSON.parse(responseContent);
 
-        // 5. Validate Citations
-        const validation = await RAGService.validateCitations(parsedResponse.citacoes);
+            // 5. Validate Citations
+            const validation = await RAGService.validateCitations(parsedResponse.citacoes);
 
-        if (!validation.valid) {
-            console.warn("Invalid citations detected, triggering fallback:", validation.missing);
-            return "Peço desculpas, mas verifiquei minhas fontes e encontrei uma inconsistência na citação do documento. Poderia reformular a pergunta?";
+            if (!validation.valid) {
+                console.warn("Invalid citations detected, triggering fallback:", validation.missing);
+                return "Peço desculpas, mas verifiquei minhas fontes e encontrei uma inconsistência na citação do documento. Poderia reformular a pergunta?";
+            }
+
+            return parsedResponse.resposta;
+
+        } catch (error) {
+            console.error("Error in AI Agent:", error);
+            return "Desculpe, ocorreu um erro interno ao processar sua solicitação.";
         }
-
-        return parsedResponse.resposta;
-
-    } catch(error) {
-        console.error("Error in AI Agent:", error);
-        return "Desculpe, ocorreu um erro interno ao processar sua solicitação.";
     }
-}
 }
 
 module.exports = new AIAgentService();

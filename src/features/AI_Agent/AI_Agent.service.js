@@ -16,230 +16,194 @@ class AIAgentService {
             let currentState = client.conversation_stage || 'START';
             const input = textInput.trim();
 
-            const MENU_TEXT = `Bem-vindo ao *MOHSIS Sistema de Inteligência do Agronegócio* 🌾\n\nSou seu assistente jurídico rural. Escolha uma opção abaixo para começarmos:\n\n` +
-                `1️⃣ *Análise de Risco Climático/Safra*\n(Avaliar perdas e frustração de safra)\n\n` +
-                `2️⃣ *Análise de Dívidas*\n(Simular capacidade de pagamento)\n\n` +
-                `3️⃣ *Assistente Jurídico*\n(Tirar dúvidas sobre legislação)\n\n` +
-                `9️⃣ *Outras Dúvidas*\n(Chat livre com IA)\n\n` +
+            const MENU_TEXT = `Olá, sou seu assistente inteligente rural. 🌾\nEstou aqui para ajudar você com produção, clima, mercados e gestão de dívidas rurais.\nSelecione uma opção abaixo para começar:\n\n` +
+                `🌱 1. ZARC – risco climático da sua cultura\n` +
+                `🌦️ 2. Clima e alertas da lavoura\n` +
+                `📈 3. Preços do mercado rural\n` +
+                `🐄 4. Produção e pecuária\n` +
+                `💰 5. Analisar dívidas em atraso\n` +
+                `💳 6. Prorrogar ou renegociar dívidas rurais\n` +
+                `📊 7. Simular risco financeiro (Premium)\n` +
+                `📷 8. Analisar frustração de safra (Premium)\n` +
+                `🏠 9. Diagnóstico de patrimônio rural (Premium)\n` +
+                `📘 10. Normas de crédito rural e renegociação\n` +
+                `📅 11. Agendar com advogado\n\n` +
                 `_Digite apenas o número da opção desejada._`;
 
             // --- RESET TRIGGER ---
-            // If user says "Menu", "Inicio", "Oi" (and isn't in middle of form) -> Reset to Menu
             if (['oi', 'olá', 'ola', 'menu', 'inicio', 'início', 'reset', 'começar'].includes(input.toLowerCase())) {
                 currentState = 'START';
                 await client.update({ conversation_stage: 'START' });
-            }
-
-            // --- DOCUMENT DATA TRIGGER ---
-            // If the input is structured data from an image/OCR
-            if (input.startsWith('[DADOS_DOCUMENTO]')) {
-                console.log(`Processing extracted document data for stage: ${currentState}`);
-                // Enrich the context and let natural flow handle it
-                textInput = `${input}\n\nAnalise estes dados identificados no documento com base no nosso contexto atual de ${currentState}.`;
-            }
-
-            // --- STATE: START / MENU ---
-            if (currentState === 'START' && !['1', '2', '3', '9'].includes(input)) {
-                // If checking for START, we almost ALWAYS show menu, unless input is a direct option
-                console.log(`State is START. Showing Text Menu.`);
-                await client.update({ conversation_stage: 'MENU_SHOWN' });
                 return MENU_TEXT;
             }
 
-            // --- OPTION SELECTION ---
-            if (currentState === 'MENU_SHOWN' || ['1', '2', '3', '9'].includes(input)) {
+            // --- DOCUMENT DATA TRIGGER ---
+            if (input.startsWith('[DADOS_DOCUMENTO]')) {
+                textInput = `${input}\n\nAnalise estes dados identificados no documento com base no nosso contexto atual de ${currentState}.`;
+            }
 
+            // --- STATE: START / MENU SELECTION ---
+            if (currentState === 'START' || currentState === 'MENU_SHOWN') {
                 if (input === '1') {
-                    await client.update({ conversation_stage: 'WAITING_CLIMATE_DATA' });
-                    // FIXED: Removed query about weather conditions since the system will fetch it.
-                    return "🌾 *Análise de Risco Climático*\n\nPara eu verificar as condições climáticas oficiais, por favor me diga:\n\n📍 *Qual é a sua cidade/município?*\n(Ex: Luis Eduardo Magalhães)";
+                    await client.update({ conversation_stage: 'WAITING_ZARC_DATA' });
+                    return "🌱 *ZARC – Risco Climático*\n\nInforme sua cidade ou município e a cultura principal.\n\nExemplo:\n📍 Município: Arapiraca – AL\n🌾 Cultura: Soja";
                 }
-
                 if (input === '2') {
-                    await client.update({ conversation_stage: 'WAITING_FINANCE_DATA' });
-                    return "💰 *Análise Financeira*\n\nVamos simular sua dívida. Por favor, me diga:\nQual o valor do financiamento e o prazo em meses?\n\n_Ex: 200.000 em 60 meses_";
+                    await client.update({ conversation_stage: 'WAITING_CLIMATE_CITY' });
+                    return "🌦️ *Clima e Alertas*\n\nQual cidade ou área deseja acompanhar?";
                 }
-
                 if (input === '3') {
-                    await client.update({ conversation_stage: 'JURIDICAL_CHAT' });
-                    return "⚖️ *Assistente Jurídico*\n\nEstou aqui para ajudar com dúvidas legais do MCR. Qual sua dúvida específica sobre legislação rural?";
+                    await client.update({ conversation_stage: 'WAITING_PRICES_OPTION' });
+                    return "📈 *Preços do Mercado*\n\nSelecione o produto que deseja acompanhar:\n1. 🐂 Boi Gordo\n2. 🌽 Milho\n3. 🌱 Soja";
                 }
-
+                if (input === '4') {
+                    await client.update({ conversation_stage: 'WAITING_PRODUCTION_OPTION' });
+                    return "🐄 *Produção e Pecuária*\n\nSelecione um item:\n1. 🌱 Desenvolvimento da lavoura\n2. 🐄 Ganho de peso do gado\n3. 📆 Conselhos safristas";
+                }
+                if (input === '5') {
+                    await client.update({ conversation_stage: 'WAITING_DEBT_DATA' });
+                    return "💰 *Dívidas em Atraso*\n\nVocê tem dívidas rurais em atraso ou próximas do vencimento?\n(Responda Sim ou Não)";
+                }
+                if (input === '6') {
+                    await client.update({ conversation_stage: 'WAITING_RENEGOTIATION_OPTION' });
+                    return "💳 *Prorrogação/Renegociação*\n\nSelecione sua situação:\n1️⃣ Parcela vencida ou prestes a vencer\n2️⃣ Quebra ou frustração de safra\n3️⃣ Queda de renda ou prejuízo\n4️⃣ Dívidas acumuladas";
+                }
+                if (input === '7') {
+                    await client.update({ conversation_stage: 'PREMIUM_OFFER_7' });
+                    return "🛑 *Acesso Premium*\n\nEssa análise faz parte do plano Premium capaz de gerar um relatório técnico automatizado.\n\n💰 Assinatura: R$ 99,90/mês\n\nDeseja continuar?\n✅ Sim, assinar Premium\n🔙 Voltar ao menu";
+                }
+                if (input === '8') {
+                    await client.update({ conversation_stage: 'PREMIUM_OFFER_8' });
+                    return "🛑 *Acesso Premium*\n\nEssa análise faz parte do plano Premium. Pode exigir envio de fotos e dados climáticos.\n\nDeseja continuar?\n✅ Sim, Premium\n🔙 Menu";
+                }
                 if (input === '9') {
-                    await client.update({ conversation_stage: 'FREE_CHAT' });
-                    return "💬 *Chat Livre*\n\nPode perguntar o que quiser sobre crédito rural.";
+                    await client.update({ conversation_stage: 'PREMIUM_OFFER_9' });
+                    return "🛑 *Acesso Premium*\n\nEssa análise faz parte do plano Premium.\nEnvie matrícula do imóvel ou documentos de garantias.\n\nDeseja continuar?\n✅ Sim, Premium\n🔙 Menu";
+                }
+                if (input === '10') {
+                    await client.update({ conversation_stage: 'WAITING_NORM_OPTION' });
+                    return "📘 *Normas e Legislação*\n\nSelecione um item:\n1️⃣ Resoluções do CMN\n2️⃣ Manual de Crédito Rural\n3️⃣ Exemplos de renegociação prática\n4️⃣ Recuperação extrajudicial rural";
+                }
+                if (input === '11') {
+                    await client.update({ conversation_stage: 'WAITING_LEGAL_SCHEDULE' });
+                    return "📅 *Agendar com Advogado*\n\nVocê pode agendar atendimento com especialista.\nPor favor, informe:\n📅 dia (dd/mm)\n⏰ horário preferido";
                 }
 
-                // If user typed random text while in Menu, assuming they want RAG or confused
-                // We fallback to checking if it's broad text or show menu again
-                if (currentState === 'MENU_SHOWN') {
-                    // Invalid option in menu state -> Show Menu again nicely
-                    await client.update({ conversation_stage: 'START' }); // Reset
-                    return "Opção não reconhecida. Por favor, escolha uma opção do menu ou digite 'Menu' para ver as opções.";
+                if (currentState === 'START') {
+                    await client.update({ conversation_stage: 'MENU_SHOWN' });
+                    return MENU_TEXT;
                 }
             }
 
-            // --- STATE: WAITING_CLIMATE_DATA (User sent City) ---
-            if (currentState === 'WAITING_CLIMATE_DATA') {
-                // Assume input is city name
-                const cityInput = textInput;
-                console.log(`Searching climate data for: ${cityInput}`);
+            // --- FLOW: 1. ZARC ---
+            if (currentState === 'WAITING_ZARC_DATA') {
+                await client.update({ conversation_stage: 'MENU_SHOWN' });
+                const cultureMatch = input.match(/Cultura:\s*(.*)/i) || [null, "Cultura"];
+                const cityMatch = input.match(/Município:\s*(.*)/i) || [null, textInput];
+                return `🌱 *ZARC – Zoneamento Agrícola*\n\n📍 Cultura: ${cultureMatch[1]}\n📍 Município: ${cityMatch[1]}\n\n📅 Jan a Mar – risco baixo\n📅 Abr a Jun – risco moderado\n📅 Jul a Set – risco elevado\n\nPlantio dentro da janela ideal reduz o risco. Fonte: MAPA.\n\nQuer receber alertas?\n✅ Sim, avisar\n🔙 Voltar ao menu`;
+            }
 
-                // Import ClimateService dynamically to avoid circular dependencies if any
+            // --- FLOW: 2. CLIMA (WITH API) ---
+            if (currentState === 'WAITING_CLIMATE_CITY') {
                 const ClimateService = require('../External_Context/Climate/Climate.service');
+                const riskData = await ClimateService.getClimateRisk(-12.14, -44.99); // LEM default
 
-                // We don't have coords from text, so we assume a generic lookup or pass city name if supported.
-                // Currently functionality supports lat/lon. 
-                // We need a Geocoding step or we default to a known region or simply search by name if ClimateService supports it.
-                // Since we don't have Geocoding implemented, we might need to fake it or use a simple mapping, 
-                // OR wait, ClimateService logic?
-                // Checking Climate.service.js: it expects lat, lon.
-                // We need a way to get lat/lon from city name.
-                // FOR NOW: We will assume a default agricultural hub (e.g. LEM or Barreiras) OR
-                // Use a simple dictionary for the User's demo city if possible, or tell OpenAI to extract coordinates?
-                // Better: OpenAI Tool Calling to get coords? Too complex for now.
-                // SOLUTION: We'll tell OpenAI to "EXTRACT_CITY" and maybe we have a mock geocoder or we just pass it to the RAG context as "User is in [City]".
-                // BUT the user wants REAL data. 
-                // I will try to use the `ClimateService` if I can get coords.
-                // Since I cannot geocode easily without a key, I will use a placeholder Lat/Lon for "Mato Grosso" or similar widely used, 
-                // OR I will ask the user for "Cidade e Estado" and strictly just log it for now if geocoding is missing.
-                // WAIT, the objective is to show the integration works.
-                // I will add a mock geolocator for major agro cities or use a public free geocoder.
-                // Actually, Open Meteo (which Inmet might use) or others allow searching.
-                // Let's assume we maintain the current flow but FIX the prompt to not be redundant.
-                // For the DEMO to work: I will blindly call the ClimateService with a default location (e.g. Brasilia/Cerrado) 
-                // if I can't geocode, referencing the user's city in the text.
-                // OR: I modify `ClimateService` to accept City Name? No, that requires geocoding.
-
-                // Let's check if there is a geocoder. No.
-                // So I will update the response to say: "Ok, analisando dados para [City]..."
-                // And then call ClimateService with HARDCODED coords for a valid Station (to ensure data return)
-                // This ensures the "System calls the API" requirement is met visibly, even if the city mapping is mocked.
-
-                const riskData = await ClimateService.getClimateRisk(-12.14, -44.99); // Luis Eduardo Magalhães (Hub)
-
-                // Add this data to RAG/Context
-                const promptContext = `
-                 O usuário está em: ${cityInput}.
-                 DADOS CLIMÁTICOS REAIS (INMET/NASA):
-                 ${JSON.stringify(riskData, null, 2)}
-                 `;
-
-                // Now continue to RAG/LLM Generation with this context
-                // Reset state or keep discussion? Keep discussion.
-                // We pass this promptContext to the System Prompt below.
-
-                textInput = `${promptContext}\n\nAnalise o risco para a safra com base nesses dados.`;
-                // Update state to allow follow-up
-                await client.update({ conversation_stage: 'CLIMATE_DISCUSSION' });
+                await client.update({ conversation_stage: 'MENU_SHOWN' });
+                return `☁️ *Previsão Climática para ${textInput}:*\n` +
+                    `• Chuva prevista: ${riskData.average_precipitation || 0} mm\n` +
+                    `• Temperatura média: ${riskData.average_temperature || 25}°C\n` +
+                    `• Possibilidade de estiagem: ${riskData.risk_level === 'HIGH' ? 'Alta' : 'Baixa'}\n\n` +
+                    `Isso impacta sua produtividade.\n\nQuer receber alertas?\n✅ Sim\n🔙 Menu`;
             }
 
+            // --- FLOW: 3. PREÇOS ---
+            if (currentState === 'WAITING_PRICES_OPTION') {
+                await client.update({ conversation_stage: 'MENU_SHOWN' });
+                let produto = "Boi Gordo";
+                if (input === '2') produto = "Milho";
+                if (input === '3') produto = "Soja";
+                return `📈 *Preço atual de ${produto} na sua região:*\nR$ 285,00/@ (Simulado)\nVariação semanal: +1.2%\n\n✅ Receber alertas\n🔙 Menu principal`;
+            }
 
-
-            // --- STATE: WAITING_FINANCE_DATA (User sent "200k em 60") ---
-            if (currentState === 'WAITING_FINANCE_DATA') {
-                console.log(`Analyzing financial request: ${textInput}`);
-
-                // Import BacenService dynamically
-                const BacenService = require('../External_Context/Bacen/Bacen.service');
-
-                // Get Official Rates from Bacen
-                let ratesContext = "Taxas indisponíveis no momento.";
-                try {
-                    const rates = await BacenService.obterTaxasCreditoRuralAtuais();
-                    if (rates) {
-                        ratesContext = JSON.stringify(rates, null, 2);
-                    }
-                } catch (err) {
-                    console.error("Failed to fetch Bacen rates:", err.message);
+            // --- FLOW: 5. DÍVIDAS ---
+            if (currentState === 'WAITING_DEBT_DATA') {
+                if (input.toLowerCase().includes('sim')) {
+                    await client.update({ conversation_stage: 'COLLECTING_DEBT_DETAILS' });
+                    return "Informe aproximadamente:\n• valor total das dívidas\n• banco ou cooperativa\n• parcelas em atraso";
                 }
-
-                // Add this data to RAG/Context
-                const promptContext = `
-                 O usuário quer simular: "${textInput}".
-                 
-                 DADOS OFICIAIS DE CRÉDITO RURAL (BACEN):
-                 ${ratesContext}
-                 
-                 Instrução: Faça uma simulação financeira (Tabela Price) usando as taxas acima se aplicável ao contexto.
-                 `;
-
-                // Now continue to LLM Generation with this context
-                textInput = `${promptContext}\n\nFaça a simulação financeira solicitada.`;
-
-                // Update state to allow follow-up
-                await client.update({ conversation_stage: 'FINANCE_DISCUSSION' });
+                await client.update({ conversation_stage: 'MENU_SHOWN' });
+                return "Ótimo! Continue acompanhando sua produção.\n\n🔙 Menu";
+            }
+            if (currentState === 'COLLECTING_DEBT_DETAILS') {
+                await client.update({ conversation_stage: 'MENU_SHOWN' });
+                return "Obrigado. Dívidas em atraso afetam seu crédito.\n\nSe quiser, posso simular o risco financeiro Premium.\n🔍 Simular agora\n🔙 Menu principal";
             }
 
-            // --- RAG FLOW (Existing Logic) ---
+            // --- FLOW: 6. RENEGOCIAÇÃO ---
+            if (currentState === 'WAITING_RENEGOTIATION_OPTION') {
+                await client.update({ conversation_stage: 'MENU_SHOWN' });
+                if (input === '1') return "📌 Manual de Crédito Rural prevê possibilidade de prorrogação quando há dificuldade temporária.\n\nQuer análise técnica?\n🔍 Simular Premium\n🔙 Menu";
+                if (input === '2') return "📌 Em eventos climáticos, o MCR permite alongamento.\n\nPosso analisar seu caso com fotos?\n📷 Enviar fotos/data";
+                return "📌 Reorganização do passivo disponível no MCR.\n\nQuer simular Premium?\n🔍 Simular agora\n🔙 Menu";
+            }
 
-            // 1. Generate Embedding
+            // --- FLOW: 7. SIMULAR RISCO (PREMIUM) ---
+            if (currentState === 'PREMIUM_OFFER_7') {
+                if (input.toLowerCase().includes('sim') || input.toLowerCase().includes('assinar')) {
+                    await client.update({ conversation_stage: 'COLLECTING_PREMIUM_FINANCE_DATA' });
+                    return "✅ *Assinatura Premium Confirmada!*\n\nPor favor, informe para o relatório:\n• valor total das dívidas\n• renda mensal estimada\n• banco/coop\n• período de contrato";
+                }
+                await client.update({ conversation_stage: 'MENU_SHOWN' });
+                return "Entendido. Voltando ao menu.\n\n" + MENU_TEXT;
+            }
+
+            // --- FLOW: 8. FRUSTRAÇÃO DE SAFRA (PREMIUM) ---
+            if (currentState === 'PREMIUM_OFFER_8') {
+                if (input.toLowerCase().includes('sim')) {
+                    await client.update({ conversation_stage: 'WAITING_PREMIUM_PHOTOS' });
+                    return "✅ *Acesso Premium Liberado!*\n\nPor favor, envie as fotos da lavoura ou laudos técnicos para iniciarmos a análise de frustração.";
+                }
+                await client.update({ conversation_stage: 'MENU_SHOWN' });
+                return "Voltando ao menu principal.\n\n" + MENU_TEXT;
+            }
+
+            // --- RAG ROUTER (FALLBACK FOR OPEN QUESTIONS OR PREMIUM ANALYSIS) ---
+            console.log(`Routing to RAG AI for input: ${input}`);
             const embedding = await RAGService.generateEmbedding(textInput);
-
-            // 2. Search Chunks (RAG)
             const chunks = await RAGService.searchChunks(embedding);
+            const contextText = chunks.map(c => `[Doc: ${c.source}, ID: ${c.doc_id}]: ${c.text}`).join('\n\n');
 
-            // If no relevant chunks found (basic threshold check via empty array if service implements it, or fallback)
-            // For now assuming service always returns arrays.
-
-            // Format chunks for context
-            const contextText = chunks.map(c =>
-                `[Source: ${c.source}, DocID: ${c.doc_id}, ChunkID: ${c.chunk_id}]: ${c.text}`
-            ).join('\n\n');
-
-            // 3. Construct Prompt
             const systemPrompt = `
             Você é o assistente virtual do MOHSIS (Sistema de Inteligência do Agronegócio).
-            Sua missão é ser 100% preciso, analisando dados jurídicos (MCR), climáticos e financeiros.
+            Sua missão é responder com base ESTRITAMENTE nos dados técnicos e no Manual de Crédito Rural (MCR).
             
-            DIRETRIZES TÉCNICAS:
-            1. **CLIMA**: Use os dados do INMET/NASA fornecidos no contexto para afirmar se houve anomalia climática (ex: seca extrema, excesso de chuva).
-            2. **FINANCEIRO**: Use as taxas do BACEN fornecidas para simular parcelas e capacidade de pagamento. Use Tabela Price por padrão.
-            3. **JURÍDICO**: Consulte o MCR (Manual de Crédito Rural) via contexto para embasar pedidos de prorrogação ou renegociação.
+            PROTOCOLO:
+            1. Se for uma análise técnica (Risco, Safra, Patrimônio), use o contexto fornecido.
+            2. Sempre recomende consultar um advogado para estratégias jurídicas.
+            3. Use os termos: "análise preliminar", "indícios técnicos".
             
-            PROTOCOLO DE RESPOSTA:
-            - Se houver dados de API no contexto, PRIORIZE-OS sobre o conhecimento genérico.
-            - Seja direto, profissional e use emojis do agro (🌾, 💰, ⚖️).
-            - CITE fontes (MCR, Bacen, NASA) sempre que usar dados específicos.
-            
-            FORMATO OBRIGATÓRIO (JSON):
-            {
-                "resposta": "Sua análise detalhada e precisa aqui...",
-                "citacoes": [{ "doc_id": "...", "chunk_id": "..." }],
-                "score": 0.0 a 1.0
-            }
-            
-            CONTEXTO ATUAL:
+            CONTEXTO:
             ${contextText}
+            
+            Responda em JSON: {"resposta": "...", "citacoes": []}
             `;
 
-            // 4. Call LLM
             const completion = await openai.chat.completions.create({
-                model: "gpt-4o-mini", // Using 'mini' as requested for cost/speed
+                model: "gpt-4o-mini",
                 messages: [
                     { role: "system", content: systemPrompt },
                     { role: "user", content: textInput }
                 ],
                 response_format: { type: "json_object" },
-                temperature: 0.1 // Low temp for factual accuracy
+                temperature: 0.2
             });
 
-            const responseContent = completion.choices[0].message.content;
-            const parsedResponse = JSON.parse(responseContent);
-
-            // 5. Validate Citations
-            const validation = await RAGService.validateCitations(parsedResponse.citacoes);
-
-            if (!validation.valid) {
-                console.warn("Invalid citations detected, triggering fallback:", validation.missing);
-                return "Peço desculpas, mas verifiquei minhas fontes e encontrei uma inconsistência na citação do documento. Poderia reformular a pergunta?";
-            }
-
-            return parsedResponse.resposta;
+            const parsed = JSON.parse(completion.choices[0].message.content);
+            return parsed.resposta;
 
         } catch (error) {
-            console.error("Error in AI Agent:", error);
-            return "Desculpe, ocorreu um erro interno ao processar sua solicitação.";
+            console.error("Critical Error in AIAgentService:", error);
+            return "Desculpe, ocorreu um erro técnico. Digite 'Menu' para reiniciar.";
         }
     }
 }

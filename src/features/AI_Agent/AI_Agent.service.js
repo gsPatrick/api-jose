@@ -168,22 +168,46 @@ class AIAgentService {
             }
 
             // --- RAG ROUTER (FALLBACK FOR OPEN QUESTIONS OR PREMIUM ANALYSIS) ---
-            console.log(`Routing to RAG AI for input: ${input}`);
+            console.log(`Routing to RAG AI for input: ${input} in stage: ${currentState}`);
+
+            let extraContext = "";
+
+            // Integrate Real-Time Data if relevant to Finance or Climate
+            if (currentState.includes('FINANCE') || currentState.includes('DEBT') || input.toLowerCase().includes('juros')) {
+                const BacenService = require('../External_Context/Bacen/Bacen.service');
+                try {
+                    const rates = await BacenService.obterTaxasCreditoRuralAtuais();
+                    extraContext += `\n[DADOS REAIS BACEN]: ${JSON.stringify(rates)}`;
+                } catch (e) { console.error("Bacen inject error", e.message); }
+            }
+
+            if (currentState.includes('CLIMATE') || currentState.includes('SAFRA') || input.toLowerCase().includes('chuva')) {
+                const ClimateService = require('../External_Context/Climate/Climate.service');
+                try {
+                    const risk = await ClimateService.getClimateRisk(-12.14, -44.99); // LEM Hub
+                    extraContext += `\n[DADOS REAIS CLIMA NASA/INMET]: ${JSON.stringify(risk)}`;
+                } catch (e) { console.error("Climate inject error", e.message); }
+            }
+
             const embedding = await RAGService.generateEmbedding(textInput);
             const chunks = await RAGService.searchChunks(embedding);
             const contextText = chunks.map(c => `[Doc: ${c.source}, ID: ${c.doc_id}]: ${c.text}`).join('\n\n');
 
             const systemPrompt = `
             Você é o assistente virtual do MOHSIS (Sistema de Inteligência do Agronegócio).
-            Sua missão é responder com base ESTRITAMENTE nos dados técnicos e no Manual de Crédito Rural (MCR).
+            Sua missão é responder com base ESTRITAMENTE nos dados técnicos, Manual de Crédito Rural (MCR) e dados de API fornecidos.
             
-            PROTOCOLO:
-            1. Se for uma análise técnica (Risco, Safra, Patrimônio), use o contexto fornecido.
-            2. Sempre recomende consultar um advogado para estratégias jurídicas.
-            3. Use os termos: "análise preliminar", "indícios técnicos".
+            DIRETRIZES DE INTEGRAÇÃO:
+            1. Se houver [DADOS REAIS BACEN], use-os para analisar juros e simular parcelas.
+            2. Se houver [DADOS REAIS CLIMA], use-os para validar perdas de safra.
+            3. Cite sempre o MCR como base jurídica para prorrogações.
+            4. Use os termos: "análise preliminar", "indícios técnicos".
             
-            CONTEXTO:
+            CONTEXTO JURÍDICO (RAG):
             ${contextText}
+            
+            DADOS DE API (REAL-TIME):
+            ${extraContext}
             
             Responda em JSON: {"resposta": "...", "citacoes": []}
             `;
@@ -195,7 +219,7 @@ class AIAgentService {
                     { role: "user", content: textInput }
                 ],
                 response_format: { type: "json_object" },
-                temperature: 0.2
+                temperature: 0.1
             });
 
             const parsed = JSON.parse(completion.choices[0].message.content);

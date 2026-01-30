@@ -30,8 +30,9 @@ class AIAgentService {
                 `📅 11. Agendar com advogado\n\n` +
                 `_Digite apenas o número da opção desejada._`;
 
-            // --- RESET TRIGGER ---
-            if (['oi', 'olá', 'ola', 'menu', 'inicio', 'início', 'reset', 'começar'].includes(input.toLowerCase())) {
+            // --- RESET TRIGGER & GREETINGS ---
+            const greetings = ['oi', 'olá', 'ola', 'menu', 'inicio', 'início', 'reset', 'começar', 'bom dia', 'boa tarde', 'boa noite', 'ajuda'];
+            if (greetings.includes(input.toLowerCase())) {
                 currentState = 'START';
                 await client.update({ conversation_stage: 'START' });
                 return MENU_TEXT;
@@ -44,6 +45,11 @@ class AIAgentService {
 
             // --- STATE: START / MENU SELECTION ---
             if (currentState === 'START' || currentState === 'MENU_SHOWN') {
+                // Return Menu immediately if state is START and no option selected
+                if (currentState === 'START' && !['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'].includes(input)) {
+                    await client.update({ conversation_stage: 'MENU_SHOWN' });
+                    return MENU_TEXT;
+                }
                 if (input === '1') {
                     await client.update({ conversation_stage: 'WAITING_ZARC_DATA' });
                     return "🌱 *ZARC – Risco Climático*\n\nInforme sua cidade ou município e a cultura principal.\n\nExemplo:\n📍 Município: Arapiraca – AL\n🌾 Cultura: Soja";
@@ -87,6 +93,15 @@ class AIAgentService {
                 if (input === '11') {
                     await client.update({ conversation_stage: 'WAITING_LEGAL_SCHEDULE' });
                     return "📅 *Agendar com Advogado*\n\nVocê pode agendar atendimento com especialista.\nPor favor, informe:\n📅 dia (dd/mm)\n⏰ horário preferido";
+                }
+
+                if (currentState === 'MENU_SHOWN') {
+                    // If user is in Menu state but typed something unrecognized
+                    // If it's short (like a greeting), just return Menu again
+                    if (input.length < 15) {
+                        return MENU_TEXT;
+                    }
+                    // If it's a long question, we'll let it fall through to RAG below
                 }
 
                 if (currentState === 'START') {
@@ -198,10 +213,11 @@ class AIAgentService {
             Sua missão é responder com base ESTRITAMENTE nos dados técnicos, Manual de Crédito Rural (MCR) e dados de API fornecidos.
             
             DIRETRIZES DE INTEGRAÇÃO:
-            1. Se houver [DADOS REAIS BACEN], use-os para analisar juros e simular parcelas.
-            2. Se houver [DADOS REAIS CLIMA], use-os para validar perdas de safra.
-            3. Cite sempre o MCR como base jurídica para prorrogações.
-            4. Use os termos: "análise preliminar", "indícios técnicos".
+            1. Se o usuário apenas te cumprimentar (ex: "oi", "boa tarde") sem uma dúvida técnica, peça educadamente para ele escolher uma opção do menu principal ou digitar "Menu".
+            2. Se houver [DADOS REAIS BACEN], use-os para analisar juros e simular parcelas.
+            3. Se houver [DADOS REAIS CLIMA], use-os para validar perdas de safra.
+            4. Cite sempre o MCR como base jurídica para prorrogações.
+            5. Use os termos: "análise preliminar", "indícios técnicos".
             
             CONTEXTO JURÍDICO (RAG):
             ${contextText}

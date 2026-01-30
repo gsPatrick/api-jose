@@ -183,7 +183,7 @@ class UazapiService {
         }
     }
 }
-}
+
 
 // Helper for image response
 function jsonToFriendlyText(data) {

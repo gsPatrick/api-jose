@@ -137,26 +137,41 @@ class UazapiService {
             }
 
             // --- AUDIO MESSAGE ---
+            // --- AUDIO MESSAGE ---
             else if (mediaType === 'audio' || mediaType === 'ptt' || type === 'audio') {
-                // Audio URL location varies.
-                // Log shows: content: { URL: "..." }
-                let audioUrl = null;
+                // Audio processing
+                // Check if Base64 is available (Evolution API usually provides this if configured)
+                const base64Audio = messageData.base64 || (messageData.content ? messageData.content.base64 : null);
 
-                if (messageData.content && messageData.content.URL) {
-                    audioUrl = messageData.content.URL;
-                } else {
-                    // Fallback to older fields
-                    audioUrl = messageData.mediaUrl || messageData.url || messageData.file;
-                }
-
-                if (audioUrl) {
-                    console.log(`Received audio from ${phone}: ${audioUrl}`);
-                    const transcription = await MediaService.transcribeAudio(audioUrl);
-                    // Generate AI response based on transcription
+                if (base64Audio) {
+                    console.log(`Received audio (Base64) from ${phone}`);
+                    const transcription = await MediaService.transcribeAudio(base64Audio, true);
                     const aiResponse = await AIAgentService.generateResponse(phone, transcription);
                     await this.sendMessage(phone, aiResponse);
-                } else {
-                    console.warn(`Audio received from ${phone} but no URL found in payload properties.`);
+                }
+                else {
+                    // Try to find URL
+                    let audioUrl = null;
+                    if (messageData.content && messageData.content.URL) {
+                        audioUrl = messageData.content.URL;
+                    } else {
+                        audioUrl = messageData.mediaUrl || messageData.url || messageData.file;
+                    }
+
+                    if (audioUrl) {
+                        console.log(`Received audio from ${phone}: ${audioUrl}`);
+                        // If it's an encrypted URL (.enc) and we have no keys/headers, MediaService will throw.
+                        try {
+                            const transcription = await MediaService.transcribeAudio(audioUrl, false);
+                            const aiResponse = await AIAgentService.generateResponse(phone, transcription);
+                            await this.sendMessage(phone, aiResponse);
+                        } catch (err) {
+                            console.error("Audio Processing Failed:", err.message);
+                            await this.sendMessage(phone, "⚠️ Não consegui baixar seu áudio. Por favor, solicite ao administrador para ativar a opção 'Ler Mensagens' ou 'Base64' nas configurações da instância.");
+                        }
+                    } else {
+                        console.warn(`Audio received from ${phone} but no URL or Base64 found.`);
+                    }
                 }
             }
 

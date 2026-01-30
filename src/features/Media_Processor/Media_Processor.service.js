@@ -24,11 +24,23 @@ class MediaService {
         });
     }
 
-    async transcribeAudio(url) {
+    async transcribeAudio(input, isBase64 = false) {
         let filePath = null;
         try {
-            console.log('Downloading audio from:', url);
-            filePath = await this.downloadFile(url, 'ogg'); // Assuming OGG from WhatsApp usually
+            if (isBase64) {
+                console.log('Transcribing audio from Base64');
+                filePath = path.join(os.tmpdir(), `media_b64_${Date.now()}.ogg`);
+                fs.writeFileSync(filePath, Buffer.from(input, 'base64'));
+            } else {
+                // Check if input is a raw URL - if it ends in .enc, we cannot simple-download it without keys.
+                // Ideally user enables base64 in webhook.
+                if (input.includes('.enc')) {
+                    throw new Error('Cannot download encrypted (.enc) WhatsApp media directly. Please enable "Base64" in Webhook settings or "Download Media" in Instance settings.');
+                }
+
+                console.log('Downloading audio from:', input);
+                filePath = await this.downloadFile(input, 'ogg');
+            }
 
             console.log('Transcribing audio file:', filePath);
             const transcription = await openai.audio.transcriptions.create({

@@ -102,6 +102,7 @@ class SystemService {
         return {
             success: true,
             filePath: filePath,
+            publicUrl: `/logs/${filename}`,
             report: reportContent
         };
     }

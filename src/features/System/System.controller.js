@@ -7,6 +7,7 @@ exports.runDiagnostics = async (req, res) => {
         res.json({
             message: 'Diagnostics execution complete.',
             savedToFile: result.filePath,
+            publicLogUrl: result.publicUrl,
             reportPreview: result.report.split('\n')
         });
     } catch (error) {

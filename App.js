@@ -14,6 +14,10 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Serve logs directory (WARNING: Publicly accessible)
+const path = require('path');
+app.use('/logs', express.static(path.join(__dirname, 'logs')));
+
 // Routes
 app.use('/api', routes);
 

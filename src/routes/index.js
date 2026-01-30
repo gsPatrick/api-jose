@@ -23,4 +23,8 @@ router.use('/external/bacen', bacenRoutes);
 const climateRoutes = require('../features/External_Context/Climate/Climate.routes');
 router.use('/external/climate', climateRoutes);
 
+// System Diagnostics Routes
+const systemRoutes = require('../features/System/System.routes');
+router.use('/system', systemRoutes);
+
 module.exports = router;

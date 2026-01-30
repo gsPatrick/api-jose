@@ -84,6 +84,39 @@ class UazapiService {
     }
 
     /**
+     * Downloads media from a message ID
+     * Endpoint: POST /message/download
+     */
+    async downloadMedia(messageId) {
+        try {
+            const payload = {
+                id: messageId,
+                return_base64: true,
+                return_link: false,
+                generate_mp3: false // Keep original format (ogg usually) for Whisper
+            };
+
+            const response = await axios.post(`${this.baseUrl}/message/download`, payload, {
+                headers: {
+                    'token': this.token,
+                    'apikey': this.token,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.data && response.data.base64Data) {
+                return response.data.base64Data;
+            } else if (response.data && response.data.base64) {
+                return response.data.base64;
+            }
+            return null;
+        } catch (error) {
+            console.error("Error downloading media from API:", error.response?.data || error.message);
+            return null;
+        }
+    }
+
+    /**
      * Process incoming webhook events
      * NOTE: Payload structure is inferred as generic since documentation didn't explicitly detail the INCOMING JSON.
      * We will log the payload to help with debugging.
@@ -140,8 +173,19 @@ class UazapiService {
             // --- AUDIO MESSAGE ---
             else if (mediaType === 'audio' || mediaType === 'ptt' || type === 'audio') {
                 // Audio processing
-                // Check if Base64 is available (Evolution API usually provides this if configured)
-                const base64Audio = messageData.base64 || (messageData.content ? messageData.content.base64 : null);
+                // Check if Base64 is available in payload
+                let base64Audio = messageData.base64 || (messageData.content ? messageData.content.base64 : null);
+
+                // If not in payload, try fetching via API
+                if (!base64Audio && (messageData.id || messageData.key?.id)) {
+                    const messageId = messageData.id || messageData.key.id;
+                    console.log(`Fetching audio media from API for message ID: ${messageId}`);
+                    try {
+                        base64Audio = await this.downloadMedia(messageId);
+                    } catch (dlError) {
+                        console.error("Failed to download media via API:", dlError.message);
+                    }
+                }
 
                 if (base64Audio) {
                     console.log(`Received audio (Base64) from ${phone}`);
@@ -150,7 +194,7 @@ class UazapiService {
                     await this.sendMessage(phone, aiResponse);
                 }
                 else {
-                    // Try to find URL
+                    // Fallback to URL method (likely to fail if encrypted)
                     let audioUrl = null;
                     if (messageData.content && messageData.content.URL) {
                         audioUrl = messageData.content.URL;
@@ -160,14 +204,13 @@ class UazapiService {
 
                     if (audioUrl) {
                         console.log(`Received audio from ${phone}: ${audioUrl}`);
-                        // If it's an encrypted URL (.enc) and we have no keys/headers, MediaService will throw.
                         try {
                             const transcription = await MediaService.transcribeAudio(audioUrl, false);
                             const aiResponse = await AIAgentService.generateResponse(phone, transcription);
                             await this.sendMessage(phone, aiResponse);
                         } catch (err) {
                             console.error("Audio Processing Failed:", err.message);
-                            await this.sendMessage(phone, "⚠️ Não consegui baixar seu áudio. Por favor, solicite ao administrador para ativar a opção 'Ler Mensagens' ou 'Base64' nas configurações da instância.");
+                            await this.sendMessage(phone, "⚠️ Não consegui baixar seu áudio.");
                         }
                     } else {
                         console.warn(`Audio received from ${phone} but no URL or Base64 found.`);

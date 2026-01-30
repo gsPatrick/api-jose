@@ -135,6 +135,5 @@ function jsonToFriendlyText(data) {
         .map(([key, val]) => `*${key}:* ${val}`)
         .join('\n');
 }
-}
 
 module.exports = new UazapiService();

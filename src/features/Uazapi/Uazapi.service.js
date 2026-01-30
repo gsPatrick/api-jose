@@ -220,20 +220,48 @@ class UazapiService {
 
             // --- IMAGE MESSAGE (OCR) ---
             else if (mediaType === 'image' || type === 'image') {
-                let imageUrl = null;
+                // Check payload first
+                let base64Image = messageData.base64 || (messageData.content ? messageData.content.base64 : null);
 
-                if (messageData.content && messageData.content.URL) {
-                    imageUrl = messageData.content.URL;
-                } else {
-                    imageUrl = messageData.mediaUrl || messageData.url || messageData.file;
+                // Fetch if missing
+                if (!base64Image && (messageData.id || messageData.key?.id)) {
+                    const messageId = messageData.id || messageData.key.id;
+                    console.log(`Fetching image media for message ID: ${messageId}`);
+                    try {
+                        base64Image = await this.downloadMedia(messageId);
+                    } catch (dlError) {
+                        console.error("Failed to download media via API:", dlError.message);
+                    }
                 }
 
-                if (imageUrl) {
-                    console.log(`Received image from ${phone}: ${imageUrl}`);
-                    // Process with Vision API
-                    const extractionData = await MediaService.extractDataFromImage(imageUrl);
+                // If we have base64, we need to pass a Data URI to OpenAI Vision
+                if (base64Image) {
+                    console.log(`Received image (Base64) from ${phone}`);
+                    const dataUri = `data:image/jpeg;base64,${base64Image}`; // Assuming JPEG/PNG usually
+                    const extractionData = await MediaService.extractDataFromImage(dataUri);
                     const responseText = `Recebi seu documento. Dados identificados:\n${jsonToFriendlyText(extractionData)}`;
                     await this.sendMessage(phone, responseText);
+                }
+                else {
+                    // Fallback to URL
+                    let imageUrl = null;
+                    if (messageData.content && messageData.content.URL) {
+                        imageUrl = messageData.content.URL;
+                    } else {
+                        imageUrl = messageData.mediaUrl || messageData.url || messageData.file;
+                    }
+
+                    if (imageUrl) {
+                        console.log(`Received image from ${phone}: ${imageUrl}`);
+                        try {
+                            const extractionData = await MediaService.extractDataFromImage(imageUrl);
+                            const responseText = `Recebi seu documento. Dados identificados:\n${jsonToFriendlyText(extractionData)}`;
+                            await this.sendMessage(phone, responseText);
+                        } catch (err) {
+                            console.error("Image Processing Failed:", err.message);
+                            await this.sendMessage(phone, "⚠️ Não consegui baixar a imagem do documento.");
+                        }
+                    }
                 }
             }
         } catch (error) {

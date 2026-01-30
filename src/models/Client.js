@@ -16,6 +16,10 @@ const Client = sequelize.define('Client', {
         type: DataTypes.STRING,
         defaultValue: 'novo', // 'novo', 'em_atendimento', 'finalizado'
     },
+    conversation_stage: {
+        type: DataTypes.STRING,
+        defaultValue: 'START', // START, MENU_OPTIONS, WAITING_CLIMATE_DATA, WAITING_FINANCE_DATA
+    },
     current_session: {
         type: DataTypes.JSON,
         defaultValue: {},

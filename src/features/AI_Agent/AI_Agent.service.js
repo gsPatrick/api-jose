@@ -3,68 +3,92 @@ const RAGService = require('../RAG_Core/RAG_Core.service');
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+const ClientService = require('../Client/Client.service');
+const Client = require('../../models/Client'); // Direct model access for updates if needed, or use service
+
 class AIAgentService {
     async generateResponse(clientNumber, textInput) {
         try {
             console.log(`Processing message for ${clientNumber}: ${textInput}`);
 
-            // Normalizing Input
+            // Get Client State
+            const client = await ClientService.findOrCreateClient(clientNumber);
+            let currentState = client.conversation_stage || 'START';
             const input = textInput.trim();
 
-            // --- MENU LOGIC ---
+            const MENU_OBJECT = {
+                listMessage: {
+                    title: "LegalFarm AI",
+                    description: "Olá! Sou seu assistente jurídico rural. Escolha uma opção abaixo para começarmos:",
+                    buttonText: "Ver Opções",
+                    sections: [
+                        {
+                            title: "Análise Rural",
+                            rows: [
+                                { rowId: "1", title: "Risco Climático/Safra", description: "Avaliar perdas e frustração de safra" },
+                                { rowId: "2", title: "Análise de Dívidas", description: "Simular capacidade de pagamento" }
+                            ]
+                        },
+                        {
+                            title: "Jurídico & Geral",
+                            rows: [
+                                { rowId: "3", title: "Assistente Jurídico", description: "Tirar dúvidas sobre legislação" },
+                                { rowId: "9", title: "Outras Dúvidas", description: "Chat livre com IA" }
+                            ]
+                        }
+                    ]
+                }
+            };
 
-            // If user input is a greeting OR if it doesn't match a specific context/option
-            // Ideally, we would track session state. For now, we broaden the trigger.
-            const isGreeting = ['oi', 'olá', 'ola', 'menu', 'inicio', 'início', 'ajuda', 'bom dia', 'boa tarde', 'boa noite', 'começar', 'topo'].some(keyword => input.toLowerCase().includes(keyword));
-
-            // IF it's a greeting OR the input is veeeery short (likely just starting)
-            if (isGreeting || (input.length < 20 && !['1', '2', '3', '9'].includes(input))) {
-                console.log(`Showing Menu for input: ${input}`);
-                return {
-                    listMessage: {
-                        title: "LegalFarm AI",
-                        description: "Olá! Sou seu assistente jurídico rural. Escolha uma opção abaixo para começarmos:",
-                        buttonText: "Ver Opções",
-                        sections: [
-                            {
-                                title: "Análise Rural",
-                                rows: [
-                                    { rowId: "1", title: "Risco Climático/Safra", description: "Avaliar perdas e frustração de safra" },
-                                    { rowId: "2", title: "Análise de Dívidas", description: "Simular capacidade de pagamento" }
-                                ]
-                            },
-                            {
-                                title: "Jurídico & Geral",
-                                rows: [
-                                    { rowId: "3", title: "Assistente Jurídico", description: "Tirar dúvidas sobre legislação" },
-                                    { rowId: "9", title: "Outras Dúvidas", description: "Chat livre com IA" }
-                                ]
-                            }
-                        ]
-                    }
-                };
+            // --- RESET TRIGGER ---
+            // If user says "Menu", "Inicio", "Oi" (and isn't in middle of form) -> Reset to Menu
+            if (['oi', 'olá', 'ola', 'menu', 'inicio', 'início', 'reset', 'começar'].includes(input.toLowerCase())) {
+                currentState = 'START';
+                await client.update({ conversation_stage: 'START' });
             }
 
-            // Option 1: Climate Risk (Simplified for this version)
-            if (input === '1') {
-                return "🌾 *Análise de Risco Climático*\n\nPara prosseguir, por favor me envie:\n1. O nome da sua cidade/município.\n2. Se houve seca, geada ou excesso de chuva.\n\n_Você também pode enviar uma foto do laudo ou áudio explicando._";
+            // --- STATE: START / MENU ---
+            if (currentState === 'START' && !['1', '2', '3', '9'].includes(input)) {
+                // If checking for START, we almost ALWAYS show menu, unless input is a direct option
+                console.log(`State is START. Showing Menu.`);
+                await client.update({ conversation_stage: 'MENU_SHOWN' });
+                return MENU_OBJECT;
             }
 
-            // Option 2: Financial Risk
-            if (input === '2') {
-                return "💰 *Análise Financeira*\n\nVamos simular sua dívida. Por favor, me diga:\nQual o valor do financiamento e o prazo em meses?\n\n_Ex: 200.000 em 60 meses_";
+            // --- OPTION SELECTION ---
+            if (currentState === 'MENU_SHOWN' || ['1', '2', '3', '9'].includes(input)) {
+
+                if (input === '1') {
+                    await client.update({ conversation_stage: 'WAITING_CLIMATE_DATA' });
+                    return "🌾 *Análise de Risco Climático*\n\nPara prosseguir, por favor me envie:\n1. O nome da sua cidade/município.\n2. Se houve seca, geada ou excesso de chuva.\n\n_Você também pode enviar uma foto do laudo ou áudio explicando._";
+                }
+
+                if (input === '2') {
+                    await client.update({ conversation_stage: 'WAITING_FINANCE_DATA' });
+                    return "💰 *Análise Financeira*\n\nVamos simular sua dívida. Por favor, me diga:\nQual o valor do financiamento e o prazo em meses?\n\n_Ex: 200.000 em 60 meses_";
+                }
+
+                if (input === '3') {
+                    await client.update({ conversation_stage: 'JURIDICAL_CHAT' });
+                    return "⚖️ *Assistente Jurídico*\n\nEstou aqui para ajudar com dúvidas legais do MCR. Qual sua dúvida específica sobre legislação rural?";
+                }
+
+                if (input === '9') {
+                    await client.update({ conversation_stage: 'FREE_CHAT' });
+                    return "💬 *Chat Livre*\n\nPode perguntar o que quiser sobre crédito rural.";
+                }
+
+                // If user typed random text while in Menu, assuming they want RAG or confused
+                // We fallback to checking if it's broad text or show menu again
+                if (currentState === 'MENU_SHOWN') {
+                    // Invalid option in menu state -> Show Menu again nicely
+                    await client.update({ conversation_stage: 'START' }); // Reset
+                    return "Opção não reconhecida. Por favor, escolha uma opção do menu ou digite 'Menu' para ver as opções.";
+                }
             }
 
-            // Option 3: Lawyer
-            if (input === '3') {
-                return "⚖️ *Assistente Jurídico*\n\nEstou aqui para ajudar com dúvidas legais do MCR. Qual sua dúvida específica sobre legislação rural?";
-            }
-
-            // Option 9 or Free Text -> RAG Flow
-            // If it's a number but not 1, 2, 3, 9, show menu again
-            if (/^\d+$/.test(input) && input !== '9') {
-                return "Opção inválida.\n\n" + MENU_TEXT;
-            }
+            // --- RAG FLOW (For Juridical/Free Chat or Fallback) ---
+            // Proceed to RAG...
 
             // --- RAG FLOW (Existing Logic) ---
 

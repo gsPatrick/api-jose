@@ -45,11 +45,6 @@ class AIAgentService {
 
             // --- STATE: START / MENU SELECTION ---
             if (currentState === 'START' || currentState === 'MENU_SHOWN') {
-                // Return Menu immediately if state is START and no option selected
-                if (currentState === 'START' && !['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'].includes(input)) {
-                    await client.update({ conversation_stage: 'MENU_SHOWN' });
-                    return MENU_TEXT;
-                }
                 if (input === '1') {
                     await client.update({ conversation_stage: 'WAITING_ZARC_DATA' });
                     return "🌱 *ZARC – Risco Climático*\n\nInforme sua cidade ou município e a cultura principal.\n\nExemplo:\n📍 Município: Arapiraca – AL\n🌾 Cultura: Soja";
@@ -96,12 +91,7 @@ class AIAgentService {
                 }
 
                 if (currentState === 'MENU_SHOWN') {
-                    // If user is in Menu state but typed something unrecognized
-                    // If it's short (like a greeting), just return Menu again
-                    if (input.length < 15) {
-                        return MENU_TEXT;
-                    }
-                    // If it's a long question, we'll let it fall through to RAG below
+                    if (input.length < 15) return MENU_TEXT;
                 }
 
                 if (currentState === 'START') {
@@ -110,140 +100,89 @@ class AIAgentService {
                 }
             }
 
-            // --- FLOW: 1. ZARC ---
+            // --- REPLICABLE FLOW LOGIC (BEGINNING -> MIDDLE -> END) ---
+
+            // FLOW 1: ZARC
             if (currentState === 'WAITING_ZARC_DATA') {
+                const culture = input.match(/Cultura:\s*(.*)/i)?.[1] || "Cultura";
+                const city = input.match(/Município:\s*(.*)/i)?.[1] || textInput;
+
                 await client.update({ conversation_stage: 'MENU_SHOWN' });
-                const cultureMatch = input.match(/Cultura:\s*(.*)/i) || [null, "Cultura"];
-                const cityMatch = input.match(/Município:\s*(.*)/i) || [null, textInput];
-                return `🌱 *ZARC – Zoneamento Agrícola*\n\n📍 Cultura: ${cultureMatch[1]}\n📍 Município: ${cityMatch[1]}\n\n📅 Jan a Mar – risco baixo\n📅 Abr a Jun – risco moderado\n📅 Jul a Set – risco elevado\n\nPlantio dentro da janela ideal reduz o risco. Fonte: MAPA.\n\nQuer receber alertas?\n✅ Sim, avisar\n🔙 Voltar ao menu`;
+                return `🌱 *ZARC – Zoneamento de Risco*\\n\n📍 Cultura: ${culture}\n📍 Município: ${city}\n\n📅 Jan a Mar – risco baixo\n📅 Abr a Jun – risco moderado\n📅 Jul a Set – risco elevado\n\n*VEREDITO:* O plantio dentro da janela ideal reduz o risco e facilita o crédito.\n\nQuer alertas climáticos?\n✅ Sim, avisar\n🔙 Voltar ao menu`;
             }
 
-            // --- FLOW: 2. CLIMA (WITH API) ---
+            // FLOW 2: CLIMA (BEGINNING: Input -> MIDDLE: API -> END: Verdict + CTA)
             if (currentState === 'WAITING_CLIMATE_CITY') {
                 const ClimateService = require('../External_Context/Climate/Climate.service');
-                const riskData = await ClimateService.getClimateRisk(-12.14, -44.99); // LEM default
+                const risk = await ClimateService.getClimateRisk(-12.14, -44.99); // LEM default
 
                 await client.update({ conversation_stage: 'MENU_SHOWN' });
-                return `☁️ *Previsão Climática para ${textInput}:*\n` +
-                    `• Chuva prevista: ${riskData.average_precipitation || 0} mm\n` +
-                    `• Temperatura média: ${riskData.average_temperature || 25}°C\n` +
-                    `• Possibilidade de estiagem: ${riskData.risk_level === 'HIGH' ? 'Alta' : 'Baixa'}\n\n` +
-                    `Isso impacta sua produtividade.\n\nQuer receber alertas?\n✅ Sim\n🔙 Menu`;
+                return `🌦️ *CLIMA E ALERTAS - ${textInput}*\n\n• Chuva prevista: ${risk.average_precipitation} mm\n• Temperatura: ${risk.average_temperature} °C\n• Estresse Hídrico: ${risk.risk_level === 'HIGH' ? 'ALTO' : 'BAIXO'}\n\n*ANÁLISE:* Condições impactam produtividade e manejo.\n\nQuer alertas automáticos?\n✅ Sim\n🔙 Voltar ao menu`;
             }
 
-            // --- FLOW: 3. PREÇOS ---
-            if (currentState === 'WAITING_PRICES_OPTION') {
-                await client.update({ conversation_stage: 'MENU_SHOWN' });
-                let produto = "Boi Gordo";
-                if (input === '2') produto = "Milho";
-                if (input === '3') produto = "Soja";
-                return `📈 *Preço atual de ${produto} na sua região:*\nR$ 285,00/@ (Simulado)\nVariação semanal: +1.2%\n\n✅ Receber alertas\n🔙 Menu principal`;
-            }
-
-            // --- FLOW: 5. DÍVIDAS ---
+            // FLOW 5: DÍVIDAS (BEGINNING: Confirmation -> MIDDLE: Collection -> END: Analysis + CTA)
             if (currentState === 'WAITING_DEBT_DATA') {
                 if (input.toLowerCase().includes('sim')) {
                     await client.update({ conversation_stage: 'COLLECTING_DEBT_DETAILS' });
-                    return "Informe aproximadamente:\n• valor total das dívidas\n• banco ou cooperativa\n• parcelas em atraso";
+                    return "Informe aproximadamente:\n• Valor total\n• Banco/Cooperativa\n• Parcelas em atraso";
                 }
                 await client.update({ conversation_stage: 'MENU_SHOWN' });
-                return "Ótimo! Continue acompanhando sua produção.\n\n🔙 Menu";
+                return "Ótimo! Continue acompanhando suas finanças.\n\n🔙 Menu";
             }
             if (currentState === 'COLLECTING_DEBT_DETAILS') {
                 await client.update({ conversation_stage: 'MENU_SHOWN' });
-                return "Obrigado. Dívidas em atraso afetam seu crédito.\n\nSe quiser, posso simular o risco financeiro Premium.\n🔍 Simular agora\n🔙 Menu principal";
+                return `📊 *ANÁLISE DE DÍVIDA*\n\nDívidas em atraso geram encargos e restrição de crédito.\n\n*PRÓXIMO PASSO:* Posso simular o risco financeiro e verificar normas de renegociação.\n🔍 Simular agora (Premium)\n🔙 Menu principal`;
             }
 
-            // --- FLOW: 6. RENEGOCIAÇÃO ---
+            // FLOW 6: RENEGOCIAÇÃO (BEGINNING: Option -> MIDDLE: Logic -> END: Verdict + CTA)
             if (currentState === 'WAITING_RENEGOTIATION_OPTION') {
                 await client.update({ conversation_stage: 'MENU_SHOWN' });
-                if (input === '1') return "📌 Manual de Crédito Rural prevê possibilidade de prorrogação quando há dificuldade temporária.\n\nQuer análise técnica?\n🔍 Simular Premium\n🔙 Menu";
-                if (input === '2') return "📌 Em eventos climáticos, o MCR permite alongamento.\n\nPosso analisar seu caso com fotos?\n📷 Enviar fotos/data";
-                return "📌 Reorganização do passivo disponível no MCR.\n\nQuer simular Premium?\n🔍 Simular agora\n🔙 Menu";
+                if (input === '2') return "📌 *VEREDITO:* Em quebras de safra, o MCR permite o alongamento da dívida.\n\nPosso iniciar sua análise premium?\n📷 Enviar fotos/laudo\n🔙 Menu";
+                return "📌 *VEREDITO:* O MCR prevê prorrogação por dificuldade temporária.\n\nQuer uma simulação técnica?\n🔍 Simular Premium\n🔙 Menu";
             }
 
-            // --- FLOW: 7. SIMULAR RISCO (PREMIUM) ---
-            if (currentState === 'PREMIUM_OFFER_7') {
-                if (input.toLowerCase().includes('sim') || input.toLowerCase().includes('assinar')) {
-                    await client.update({ conversation_stage: 'COLLECTING_PREMIUM_FINANCE_DATA' });
-                    return "✅ *Assinatura Premium Confirmada!*\n\nPor favor, informe para o relatório:\n• valor total das dívidas\n• renda mensal estimada\n• banco/coop\n• período de contrato";
-                }
-                await client.update({ conversation_stage: 'MENU_SHOWN' });
-                return "Entendido. Voltando ao menu.\n\n" + MENU_TEXT;
-            }
-
-            // --- FLOW: 8. FRUSTRAÇÃO DE SAFRA (PREMIUM) ---
-            if (currentState === 'PREMIUM_OFFER_8') {
+            // FLOW PREMIUM (Unified Endings)
+            if (currentState.startsWith('PREMIUM_OFFER')) {
                 if (input.toLowerCase().includes('sim')) {
-                    await client.update({ conversation_stage: 'WAITING_PREMIUM_PHOTOS' });
-                    return "✅ *Acesso Premium Liberado!*\n\nPor favor, envie as fotos da lavoura ou laudos técnicos para iniciarmos a análise de frustração.";
+                    await client.update({ conversation_stage: 'MENU_SHOWN' });
+                    return "✅ *Assinatura Premium Ativada!*\nNossa IA está processando seus dados climáticos e financeiros para gerar seu relatório.\n\nPara estratégia jurídica completa:\n📅 Agendar com advogado";
                 }
                 await client.update({ conversation_stage: 'MENU_SHOWN' });
                 return "Voltando ao menu principal.\n\n" + MENU_TEXT;
             }
 
-            // --- RAG ROUTER (FALLBACK FOR OPEN QUESTIONS OR PREMIUM ANALYSIS) ---
-            console.log(`Routing to RAG AI for input: ${input} in stage: ${currentState}`);
-
+            // FALLBACK: RAG ROUTER (REPLICATING THE TECHNICAL PATTERN)
+            console.log(`Routing to RAG Brain: ${input}`);
             let extraContext = "";
-
-            // Integrate Real-Time Data if relevant to Finance or Climate
-            if (currentState.includes('FINANCE') || currentState.includes('DEBT') || input.toLowerCase().includes('juros')) {
+            if (currentState.includes('FINANCE') || input.toLowerCase().includes('juros')) {
                 const BacenService = require('../External_Context/Bacen/Bacen.service');
-                try {
-                    const rates = await BacenService.obterTaxasCreditoRuralAtuais();
-                    extraContext += `\n[DADOS REAIS BACEN]: ${JSON.stringify(rates)}`;
-                } catch (e) { console.error("Bacen inject error", e.message); }
-            }
-
-            if (currentState.includes('CLIMATE') || currentState.includes('SAFRA') || input.toLowerCase().includes('chuva')) {
-                const ClimateService = require('../External_Context/Climate/Climate.service');
-                try {
-                    const risk = await ClimateService.getClimateRisk(-12.14, -44.99); // LEM Hub
-                    extraContext += `\n[DADOS REAIS CLIMA NASA/INMET]: ${JSON.stringify(risk)}`;
-                } catch (e) { console.error("Climate inject error", e.message); }
+                const rates = await BacenService.obterTaxasCreditoRuralAtuais();
+                extraContext += `\n[FINANCEIRO REAL]: ${JSON.stringify(rates)}`;
             }
 
             const embedding = await RAGService.generateEmbedding(textInput);
             const chunks = await RAGService.searchChunks(embedding);
-            const contextText = chunks.map(c => `[Doc: ${c.source}, ID: ${c.doc_id}]: ${c.text}`).join('\n\n');
+            const contextText = chunks.map(c => `[Doc: ${c.source}]: ${c.text}`).join('\n\n');
 
-            const systemPrompt = `
-            Você é o assistente virtual do MOHSIS (Sistema de Inteligência do Agronegócio).
-            Sua missão é responder com base ESTRITAMENTE nos dados técnicos, Manual de Crédito Rural (MCR) e dados de API fornecidos.
+            const systemPrompt = `Você é o MOHSIS. Responda tecnicamente (Começo, Meio e Fim):
+            1. Analise o problema (MCR/Dados).
+            2. Dê o veredito preliminar.
+            3. Recomende agendamento com advogado.
             
-            DIRETRIZES DE INTEGRAÇÃO:
-            1. Se o usuário apenas te cumprimentar (ex: "oi", "boa tarde") sem uma dúvida técnica, peça educadamente para ele escolher uma opção do menu principal ou digitar "Menu".
-            2. Se houver [DADOS REAIS BACEN], use-os para analisar juros e simular parcelas.
-            3. Se houver [DADOS REAIS CLIMA], use-os para validar perdas de safra.
-            4. Cite sempre o MCR como base jurídica para prorrogações.
-            5. Use os termos: "análise preliminar", "indícios técnicos".
-            
-            CONTEXTO JURÍDICO (RAG):
-            ${contextText}
-            
-            DADOS DE API (REAL-TIME):
-            ${extraContext}
-            
-            Responda em JSON: {"resposta": "...", "citacoes": []}
-            `;
+            CONTEXTO: ${contextText} ${extraContext}
+            Responda em JSON: {"resposta": "..."}`;
 
             const completion = await openai.chat.completions.create({
                 model: "gpt-4o-mini",
-                messages: [
-                    { role: "system", content: systemPrompt },
-                    { role: "user", content: textInput }
-                ],
-                response_format: { type: "json_object" },
-                temperature: 0.1
+                messages: [{ role: "system", content: systemPrompt }, { role: "user", content: textInput }],
+                response_format: { type: "json_object" }
             });
 
-            const parsed = JSON.parse(completion.choices[0].message.content);
-            return parsed.resposta;
+            return JSON.parse(completion.choices[0].message.content).resposta;
 
         } catch (error) {
             console.error("Critical Error in AIAgentService:", error);
-            return "Desculpe, ocorreu um erro técnico. Digite 'Menu' para reiniciar.";
+            return "Erro técnico. Digite 'Menu' para reiniciar.";
         }
     }
 }

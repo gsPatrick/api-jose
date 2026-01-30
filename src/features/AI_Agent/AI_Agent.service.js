@@ -30,6 +30,14 @@ class AIAgentService {
                 await client.update({ conversation_stage: 'START' });
             }
 
+            // --- DOCUMENT DATA TRIGGER ---
+            // If the input is structured data from an image/OCR
+            if (input.startsWith('[DADOS_DOCUMENTO]')) {
+                console.log(`Processing extracted document data for stage: ${currentState}`);
+                // Enrich the context and let natural flow handle it
+                textInput = `${input}\n\nAnalise estes dados identificados no documento com base no nosso contexto atual de ${currentState}.`;
+            }
+
             // --- STATE: START / MENU ---
             if (currentState === 'START' && !['1', '2', '3', '9'].includes(input)) {
                 // If checking for START, we almost ALWAYS show menu, unless input is a direct option
@@ -181,24 +189,27 @@ class AIAgentService {
 
             // 3. Construct Prompt
             const systemPrompt = `
-            Você é um assistente jurídico/financeiro especializado em Crédito Rural (LegalFarm AI).
-            Sua missão é responder com base ESTRITAMENTE no contexto fornecido abaixo.
+            Você é o assistente virtual do MOHSIS (Sistema de Inteligência do Agronegócio).
+            Sua missão é ser 100% preciso, analisando dados jurídicos (MCR), climáticos e financeiros.
             
-            PROTOCOLO ANTI-ALUCINAÇÃO:
-            - Se a resposta não estiver no contexto, diga "Não encontrei essa informação na minha base de dados jurídica."
-            - NÃO invente leis ou dados.
-            - CITE as fontes usando doc_id e chunk_id.
+            DIRETRIZES TÉCNICAS:
+            1. **CLIMA**: Use os dados do INMET/NASA fornecidos no contexto para afirmar se houve anomalia climática (ex: seca extrema, excesso de chuva).
+            2. **FINANCEIRO**: Use as taxas do BACEN fornecidas para simular parcelas e capacidade de pagamento. Use Tabela Price por padrão.
+            3. **JURÍDICO**: Consulte o MCR (Manual de Crédito Rural) via contexto para embasar pedidos de prorrogação ou renegociação.
             
-            FORMATO OBRIGATÓRIO DE RESPOSTA (JSON):
+            PROTOCOLO DE RESPOSTA:
+            - Se houver dados de API no contexto, PRIORIZE-OS sobre o conhecimento genérico.
+            - Seja direto, profissional e use emojis do agro (🌾, 💰, ⚖️).
+            - CITE fontes (MCR, Bacen, NASA) sempre que usar dados específicos.
+            
+            FORMATO OBRIGATÓRIO (JSON):
             {
-                "resposta": "Texto da resposta ao usuário...",
-                "citacoes": [
-                    { "doc_id": "...", "chunk_id": "..." }
-                ],
-                "score": 0.0 a 1.0 (confiança)
+                "resposta": "Sua análise detalhada e precisa aqui...",
+                "citacoes": [{ "doc_id": "...", "chunk_id": "..." }],
+                "score": 0.0 a 1.0
             }
             
-            CONTEXTO:
+            CONTEXTO ATUAL:
             ${contextText}
             `;
 

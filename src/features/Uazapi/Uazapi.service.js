@@ -237,10 +237,13 @@ class UazapiService {
                 // If we have base64, we need to pass a Data URI to OpenAI Vision
                 if (base64Image) {
                     console.log(`Received image (Base64) from ${phone}`);
-                    const dataUri = `data:image/jpeg;base64,${base64Image}`; // Assuming JPEG/PNG usually
+                    const dataUri = `data:image/jpeg;base64,${base64Image}`;
                     const extractionData = await MediaService.extractDataFromImage(dataUri);
-                    const responseText = `Recebi seu documento. Dados identificados:\n${jsonToFriendlyText(extractionData)}`;
-                    await this.sendMessage(phone, responseText);
+
+                    // Route to AI Agent for analysis instead of just static text
+                    const analysisInput = `[DADOS_DOCUMENTO]: ${JSON.stringify(extractionData)}`;
+                    const aiResponse = await AIAgentService.generateResponse(phone, analysisInput);
+                    await this.sendMessage(phone, aiResponse);
                 }
                 else {
                     // Fallback to URL
@@ -255,11 +258,12 @@ class UazapiService {
                         console.log(`Received image from ${phone}: ${imageUrl}`);
                         try {
                             const extractionData = await MediaService.extractDataFromImage(imageUrl);
-                            const responseText = `Recebi seu documento. Dados identificados:\n${jsonToFriendlyText(extractionData)}`;
-                            await this.sendMessage(phone, responseText);
+                            const analysisInput = `[DADOS_DOCUMENTO]: ${JSON.stringify(extractionData)}`;
+                            const aiResponse = await AIAgentService.generateResponse(phone, analysisInput);
+                            await this.sendMessage(phone, aiResponse);
                         } catch (err) {
                             console.error("Image Processing Failed:", err.message);
-                            await this.sendMessage(phone, "⚠️ Não consegui baixar a imagem do documento.");
+                            await this.sendMessage(phone, "⚠️ Não consegui processar a imagem do documento.");
                         }
                     }
                 }

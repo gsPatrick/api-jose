@@ -16,7 +16,7 @@ class AIAgentService {
             let currentState = client.conversation_stage || 'START';
             const input = textInput.trim();
 
-            const MENU_TEXT = `Bem-vindo ao *LegalFarm AI* 🌾\n\nSou seu assistente jurídico rural. Escolha uma opção abaixo para começarmos:\n\n` +
+            const MENU_TEXT = `Bem-vindo ao *MOHSIS Sistema de Inteligência do Agronegócio* 🌾\n\nSou seu assistente jurídico rural. Escolha uma opção abaixo para começarmos:\n\n` +
                 `1️⃣ *Análise de Risco Climático/Safra*\n(Avaliar perdas e frustração de safra)\n\n` +
                 `2️⃣ *Análise de Dívidas*\n(Simular capacidade de pagamento)\n\n` +
                 `3️⃣ *Assistente Jurídico*\n(Tirar dúvidas sobre legislação)\n\n` +

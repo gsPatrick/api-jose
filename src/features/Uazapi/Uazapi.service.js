@@ -179,6 +179,9 @@ class UazapiService {
                 }
             }
         }
+        } catch(error) {
+        console.error("Error processing Uazapi webhook:", error);
+    }
 }
 
 // Helper for image response

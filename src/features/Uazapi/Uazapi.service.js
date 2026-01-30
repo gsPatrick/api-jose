@@ -52,18 +52,24 @@ class UazapiService {
         try {
             console.log("Uazapi Webhook Payload Received:", JSON.stringify(payload, null, 2));
 
-            // Basic check to see if it's a message event
-            // Adjust these checks based on actual payload observation
-            // Assuming payload contains 'event' or 'type' or just the message object
+            // Check if it's a message event
+            // Based on logs: EventType: "messages"
+            // The message data is inside payload.message
+            if (payload.EventType !== 'messages' || !payload.message) {
+                return;
+            }
 
-            // Example generic extraction (needs validation against real payload)
-            const eventType = payload.event || payload.type;
-            const messageData = payload.message || payload; // fallback
+            const messageData = payload.message;
 
-            // Ignore own messages (if indicator exists)
-            if (messageData.fromMe) return;
+            // Ignore messages sent by the API itself or by the owner
+            if (messageData.fromMe || messageData.wasSentByApi) return;
 
-            const phone = messageData.remoteJid || messageData.from || payload.number || payload.phone;
+            // Extract sender phone number
+            // Structure: "chatid": "557182862912@s.whatsapp.net" or "sender_pn": "557182862912@s.whatsapp.net"
+            // We need to clean the "@s.whatsapp.net" suffix
+            let rawPhone = messageData.chatid || messageData.sender_pn;
+            const phone = rawPhone ? rawPhone.split('@')[0] : null;
+
             if (!phone) {
                 console.warn("Could not identify sender phone number in webhook payload.");
                 return;
@@ -72,35 +78,46 @@ class UazapiService {
             // Ensure client exists
             await ClientService.findOrCreateClient(phone);
 
-            // Determine content type
-            const textContent = messageData.text || messageData.body || (messageData.conversation ? messageData.conversation : null);
-            const mediaType = messageData.mediaType || messageData.type;
+            // Determine Message Type
+            const messageType = messageData.type; // 'text', 'image', 'audio', etc.
 
-            if (textContent && (!mediaType || mediaType === 'chat' || mediaType === 'text')) {
-                // Dispatch to AI Agent
-                console.log(`Received text from ${phone}: ${textContent}`);
-                const aiResponse = await AIAgentService.generateResponse(phone, textContent);
-                await this.sendMessage(phone, aiResponse);
+            // --- TEXT MESSAGE ---
+            if (messageType === 'text') {
+                const textContent = messageData.text || messageData.content;
 
-            } else if (mediaType === 'audio' || mediaType === 'ptt') {
-                // Check for audio URL
+                if (textContent) {
+                    console.log(`Received text from ${phone}: ${textContent}`);
+                    const aiResponse = await AIAgentService.generateResponse(phone, textContent);
+                    await this.sendMessage(phone, aiResponse);
+                }
+            }
+
+            // --- AUDIO MESSAGE ---
+            else if (messageType === 'audio' || messageType === 'ptt') {
+                // In UazapiGO, mediaUrl might be in different fields depending on version/config
+                // Checking common candidates
                 const audioUrl = messageData.mediaUrl || messageData.url || messageData.file;
 
                 if (audioUrl) {
                     console.log(`Received audio from ${phone}: ${audioUrl}`);
                     const transcription = await MediaService.transcribeAudio(audioUrl);
+                    // Generate AI response based on transcription
                     const aiResponse = await AIAgentService.generateResponse(phone, transcription);
                     await this.sendMessage(phone, aiResponse);
                 } else {
-                    console.warn("Audio received but no URL found.");
+                    console.warn(`Audio received from ${phone} but no URL found in payload.`);
                 }
+            }
 
-            } else if (mediaType === 'image') {
+            // --- IMAGE MESSAGE (OCR) ---
+            else if (messageType === 'image') {
                 const imageUrl = messageData.mediaUrl || messageData.url || messageData.file;
+
                 if (imageUrl) {
                     console.log(`Received image from ${phone}: ${imageUrl}`);
+                    // Process with Vision API
                     const extractionData = await MediaService.extractDataFromImage(imageUrl);
-                    const responseText = `Dados extraídos: ${JSON.stringify(extractionData, null, 2)}`;
+                    const responseText = `Recebi seu documento. Dados identificados:\n${jsonToFriendlyText(extractionData)}`;
                     await this.sendMessage(phone, responseText);
                 }
             }
@@ -109,6 +126,15 @@ class UazapiService {
             console.error("Error processing Uazapi webhook:", error);
         }
     }
+}
+
+// Helper for image response
+function jsonToFriendlyText(data) {
+    if (!data) return "Não consegui ler nada.";
+    return Object.entries(data)
+        .map(([key, val]) => `*${key}:* ${val}`)
+        .join('\n');
+}
 }
 
 module.exports = new UazapiService();

@@ -13,8 +13,13 @@ class AIAgentService {
 
             // --- MENU LOGIC ---
 
-            // If user says "Oi", "Ola", "Menu", "Inicio" -> Show Menu
-            if (['oi', 'olá', 'ola', 'menu', 'inicio', 'início', 'ajuda'].includes(input.toLowerCase())) {
+            // If user input is a greeting OR if it doesn't match a specific context/option
+            // Ideally, we would track session state. For now, we broaden the trigger.
+            const isGreeting = ['oi', 'olá', 'ola', 'menu', 'inicio', 'início', 'ajuda', 'bom dia', 'boa tarde', 'boa noite', 'começar', 'topo'].some(keyword => input.toLowerCase().includes(keyword));
+
+            // IF it's a greeting OR the input is veeeery short (likely just starting)
+            if (isGreeting || (input.length < 20 && !['1', '2', '3', '9'].includes(input))) {
+                console.log(`Showing Menu for input: ${input}`);
                 return {
                     listMessage: {
                         title: "LegalFarm AI",

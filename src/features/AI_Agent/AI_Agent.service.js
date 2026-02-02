@@ -17,31 +17,45 @@ class AIAgentService {
             const input = textInput.trim();
 
             const MENU_TEXT = `✅ Ótimo! Como posso ajudar?\n\nEscolha uma opção:\n\n` +
-                `[📋 1] Consultar dados ambientais\n` +
-                `[🌦️ 2] Consultar dados climáticos\n` +
-                `[📊 3] Acessar Zoneamento Agrícola (ZARC)\n` +
-                `[⚖️ 4] Informações sobre dívidas e contratos\n` +
-                `[📞 5] Falar com o Dr. [Nome]\n\n` +
-                `_Responda com o número (1, 2, 3, 4 ou 5)_`;
+                `[🌱 1] Monitoramento da Safra\n` +
+                `[📈 2] Mercado e Produção\n` +
+                `[⚖️ 3] Apoio e Jurídico\n` +
+                `[📞 4] Falar com o Dr. [Nome]\n\n` +
+                `_Responda com o número (1, 2, 3 ou 4)_`;
+
+            const MONITORAMENTO_MENU = `🌱 *MONITORAMENTO DA SAFRA*\n\nEscolha uma opção:\n\n` +
+                `[1] 🌦️ Dados Climáticos\n` +
+                `[2] 🌱 ZARC, risco climático da cultura\n` +
+                `[3] 📷 Análise de frustração de safra\n\n` +
+                `[0] 🔙 Voltar ao menu principal`;
+
+            const MERCADO_MENU = `📈 *MERCADO E PRODUÇÃO*\n\nEscolha uma opção:\n\n` +
+                `[1] 📊 Preços do mercado rural\n` +
+                `[2] 🌾 Produção agrícola\n` +
+                `[3] 🐄 Pecuária e indicadores\n\n` +
+                `[0] 🔙 Voltar ao menu principal`;
+
+            const APOIO_MENU = `⚖️ *APOIO E JURÍDICO*\n\nEscolha uma opção:\n\n` +
+                `[1] 📘 Informações gerais sobre regras\n` +
+                `[2] 📅 Agendar consulta com advogado\n` +
+                `[3] 📄 Documentos úteis\n\n` +
+                `[0] 🔙 Voltar ao menu principal`;
 
             const TERMS_TEXT = `🔒 *TERMOS DE CIÊNCIA E PRIVACIDADE*\n\n` +
                 `O que o Mohsis faz:\n✅ Consulta dados públicos (IBAMA, INMET, SICAR)\n✅ Explica informações de forma educativa\n✅ Agenda consulta com o Dr. [Nome]\n\n` +
                 `O que o Mohsis NÃO faz:\n❌ Análise jurídica de casos específicos\n❌ Emissão de laudos ou pareceres\n❌ Promessa de resultados\n\n` +
                 `Ao continuar, você autoriza o tratamento dos seus dados para triagem e agendamento.\n\n` +
-                `Deseja aceitar e continuar?\n✅ [Aceitar e continuar]\n❌ [Não aceito]`;
+                `Deseja aceitar e continuar?\n✅ [Aceitar e continuar] | ❌ [Não aceito]`;
 
             // --- RESET TRIGGER & GREETINGS ---
             const greetings = ['oi', 'olá', 'ola', 'menu', 'inicio', 'início', 'reset', 'começar', 'bom dia', 'boa tarde', 'boa noite', 'ajuda', 'termos'];
             if (greetings.includes(input.toLowerCase())) {
-                // If strictly "termos", show terms again
                 if (input.toLowerCase() === 'termos') {
                     currentState = 'WAITING_TERMS';
                     await client.update({ conversation_stage: 'WAITING_TERMS' });
                     return TERMS_TEXT;
                 }
 
-                // For other greetings, check if terms accepted (assuming non-START state means accepted)
-                // BUT, to be safe for V1, let's force Terms on Reset if status is START or empty
                 if (!client.conversation_stage || client.conversation_stage === 'START') {
                     currentState = 'WAITING_TERMS';
                     await client.update({ conversation_stage: 'WAITING_TERMS' });
@@ -50,7 +64,6 @@ class AIAgentService {
                         `Antes de continuar, você aceita nossos termos de uso?\n[Ver termos] [Aceitar e continuar] [Não quero continuar]`;
                 }
 
-                // If already past terms, show menu
                 currentState = 'MENU_SHOWN';
                 await client.update({ conversation_stage: 'MENU_SHOWN' });
                 return MENU_TEXT;
@@ -76,35 +89,99 @@ class AIAgentService {
                     return "Entendido! Sem problemas.\n\nPara informações gerais, acesse nosso site.\nSe mudar de ideia, é só enviar uma mensagem aqui.\n\nBom trabalho! 🌾";
                 }
                 // Fallback for this state
-                return "Para prosseguir, preciso que você confirme se aceita ou deseja ver os termos.\n[Ver termos] [Aceitar] [Não aceito]";
+                return "Para prosseguir, preciso que você aceite ou veja os termos.\n[Ver termos] [Aceitar] [Não aceito]";
             }
 
             // --- STATE: MENU SELECTION ---
             if (currentState === 'MENU_SHOWN') {
                 if (input === '1') {
-                    await client.update({ conversation_stage: 'WAITING_ENV_DATA' }); // Placeholder Flow
-                    return "📋 *Consulta a Dados Ambientais Públicos*\n\nPosso acessar SICAR e IBAMA.\n\nInforme para consulta:\n• Código CAR completo, ou\n• CPF do proprietário, ou\n• CNPJ da empresa rural";
+                    await client.update({ conversation_stage: 'WAITING_MONITORAMENTO_SUBOPTION' });
+                    return MONITORAMENTO_MENU;
                 }
                 if (input === '2') {
-                    await client.update({ conversation_stage: 'WAITING_CLIMATE_CITY' });
-                    return "🌦️ *Consulta a Dados Climáticos Públicos*\n\nAcesso dados históricos do INMET.\n\nInforme o município para consulta:\nExemplo: Uberlândia";
+                    await client.update({ conversation_stage: 'WAITING_MERCADO_SUBOPTION' });
+                    return MERCADO_MENU;
                 }
                 if (input === '3') {
-                    // Flow 3: ZARC (Educational - Static Response as per doc)
-                    await client.update({ conversation_stage: 'MENU_SHOWN' }); // Stays in menu after info
-                    return `📊 *Zoneamento Agrícola de Risco Climático (ZARC)*\n\nO ZARC é uma ferramenta oficial do MAPA.\n\n📱 *Acesso oficial (gratuito):*\n\nAplicativo **Plantio Certo**:\n• Download: Play Store ou App Store\n\n💻 *Site do MAPA:*\nhttps://www.gov.br/agricultura/pt-br/assuntos/riscos-seguro/zarc\n\n[Voltar ao menu]`;
+                    await client.update({ conversation_stage: 'WAITING_APOIO_SUBOPTION' });
+                    return APOIO_MENU;
                 }
                 if (input === '4') {
-                    // Flow 4: Debts (Educational)
-                    await client.update({ conversation_stage: 'MENU_SHOWN' });
-                    return "⚖️ *Informações gerais sobre dívidas e contratos*\n\nPosso fornecer conteúdos educativos sobre:\n• Prorrogação por evento climático\n• Renegociação e alongamento\n• Documentação comum\n\nℹ️ Observação: a aplicação ao seu caso depende de análise individual.\n\n[Voltar ao menu]";
-                }
-                if (input === '5') {
                     await client.update({ conversation_stage: 'WAITING_LAWYER_CONTACT' });
                     return "📅 *Agendar consulta com o Dr. [Nome]*\n\nPara prosseguir com o agendamento, por favor informe (separado por vírgulas):\n1. Seu nome completo\n2. Município/estado do imóvel\n3. Tema principal\n4. Prioridade (sim/não)";
                 }
 
-                if (input.toLowerCase().includes('oi') || input.length < 5) return MENU_TEXT; // Simple fallback
+                if (input.toLowerCase().includes('oi') || input.length < 5) return MENU_TEXT;
+            }
+
+            // --- SUBMENU: MONITORAMENTO ---
+            if (currentState === 'WAITING_MONITORAMENTO_SUBOPTION') {
+                if (input === '0') {
+                    await client.update({ conversation_stage: 'MENU_SHOWN' });
+                    return MENU_TEXT;
+                }
+                if (input === '1') {
+                    await client.update({ conversation_stage: 'WAITING_CLIMATE_CITY' });
+                    return "🌦️ *Consulta a Dados Climáticos Públicos*\n\nInforme o município para consulta:\nExemplo: Uberlândia";
+                }
+                if (input === '2') {
+                    await client.update({ conversation_stage: 'WAITING_MONITORAMENTO_SUBOPTION' });
+                    return `📊 *Zoneamento Agrícola de Risco Climático (ZARC)*\n\nO ZARC é uma ferramenta oficial do MAPA.\n\n📱 *Acesso oficial (gratuito):*\n\nAplicativo **Plantio Certo**:\n• Download: Play Store ou App Store\n\n💻 *Site do MAPA:*\nhttps://www.gov.br/agricultura/pt-br/assuntos/riscos-seguro/zarc\n\n[Voltar]`;
+                }
+                if (input === '3') {
+                    await client.update({ conversation_stage: 'WAITING_MONITORAMENTO_SUBOPTION' });
+                    return "📷 *Análise de frustração de safra*\n\nEsta funcionalidade permite analisar fotos e laudos de perdas na lavoura.\n\n⚠️ Funcionalidade em desenvolvimento.\nPara triagem manual, responda com sua situação ou agende com Dr. [Nome].\n\n[Voltar]";
+                }
+                return MONITORAMENTO_MENU;
+            }
+
+            // --- SUBMENU: MERCADO ---
+            if (currentState === 'WAITING_MERCADO_SUBOPTION') {
+                if (input === '0') {
+                    await client.update({ conversation_stage: 'MENU_SHOWN' });
+                    return MENU_TEXT;
+                }
+                const baseResponse = "📈 *MERCADO E PRODUÇÃO (Informativo)*\n\nApresento informações gerais baseadas em dados públicos e de mercado.\n\n⚠️ Funcionalidade automatizada (V2) em breve.\nPara consulta direta: https://cepea.esalq.usp.br\n\n[Voltar]";
+                if (input === '1' || input === '2' || input === '3') {
+                    await client.update({ conversation_stage: 'WAITING_MERCADO_SUBOPTION' });
+                    return baseResponse;
+                }
+                return MERCADO_MENU;
+            }
+
+            // --- SUBMENU: APOIO E JURÍDICO ---
+            if (currentState === 'WAITING_APOIO_SUBOPTION') {
+                if (input === '0') {
+                    await client.update({ conversation_stage: 'MENU_SHOWN' });
+                    return MENU_TEXT;
+                }
+                if (input === '1') {
+                    await client.update({ conversation_stage: 'WAITING_RULES_SUBOPTION' });
+                    return "📘 *INFORMAÇÕES GERAIS SOBRE REGRAS*\n\nEscolha um tema:\n[A] Prorrogação de dívidas\n[B] Alongamento de contratos\n[C] Renegociação\n\n[0] Voltar";
+                }
+                if (input === '2') {
+                    await client.update({ conversation_stage: 'WAITING_LAWYER_CONTACT' });
+                    return "📅 *Agendar consulta com advogado*\n\nPara organizar o contato, informe:\nNome, Cidade, Tema e Prioridade.";
+                }
+                if (input === '3') {
+                    await client.update({ conversation_stage: 'WAITING_APOIO_SUBOPTION' });
+                    return "📄 *DOCUMENTOS ÚTEIS*\n\nReunir documentos ajuda a aproveitar melhor a consulta:\n• Contratos bancários rurais\n• Matrícula do imóvel\n• Notas fiscais de safra\n• Laudos meteorológicos/agronômicos\n\n[Voltar]";
+                }
+                return APOIO_MENU;
+            }
+
+            // --- SUBMENU: RULES (APOIO) ---
+            if (currentState === 'WAITING_RULES_SUBOPTION') {
+                if (input === '0') {
+                    await client.update({ conversation_stage: 'WAITING_APOIO_SUBOPTION' });
+                    return APOIO_MENU;
+                }
+                const ruleInfo = "📘 *Informação Geral*\n\nAs regras de crédito rural (MCR) permitem ajustes em parcelas sob certas condições (clima, preço, pragas).\n\n⚠️ Nota: A aplicação depende de análise contratual individual.\n\n[Voltar]";
+                if (['a', 'b', 'c'].includes(input.toLowerCase())) {
+                    await client.update({ conversation_stage: 'WAITING_RULES_SUBOPTION' });
+                    return ruleInfo;
+                }
+                return "📘 *REGRAS RURAIS*\nEscolha [A], [B] ou [C] ou [0] para voltar.";
             }
 
             // --- REPLICABLE FLOW LOGIC (BEGINNING -> MIDDLE -> END) ---

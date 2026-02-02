@@ -50,7 +50,10 @@ class AIAgentService {
 
             // --- RESET TRIGGER & GREETINGS ---
             const greetings = ['oi', 'olá', 'ola', 'menu', 'inicio', 'início', 'reset', 'começar', 'bom dia', 'boa tarde', 'boa noite', 'ajuda', 'termos'];
-            if (greetings.includes(input.toLowerCase())) {
+            const lowerInput = input.toLowerCase();
+
+            // Allow substring match for greetings (e.g. "Oi!" or "Bom dia, tudo bem?")
+            if (greetings.some(g => lowerInput.includes(g))) {
                 if (input.toLowerCase() === 'termos') {
                     currentState = 'WAITING_TERMS';
                     await client.update({ conversation_stage: 'WAITING_TERMS' });

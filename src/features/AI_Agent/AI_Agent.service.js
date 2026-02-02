@@ -271,10 +271,22 @@ class AIAgentService {
             const chunks = await RAGService.searchChunks(embedding);
             const contextText = chunks.map(c => `[Doc: ${c.source}]: ${c.text}`).join('\n\n');
 
-            const systemPrompt = `Você é o MOHSIS, assistente rural.
-            Use os dados abaixo para responder de forma educativa e curta.
-            CONTEXTO: ${contextText}
-            Sempre termine com: "Para análise específica, recomendo agendar consulta."`;
+            const systemPrompt = `Você é o MOHSIS, assistente de informação jurídica agrária.
+            Responda tecnicamente de forma educativa e informativa (Começo, Meio e Fim).
+
+            DIRETRIZES ÉTICAS ABSOLUTAS (PROIBIÇÕES):
+            - NÃO diga "Você tem direito" ou "O banco deve".
+            - NÃO analise documentos ou contratos específicos.
+            - NÃO garanta resultados judiciais ou isenção de dívidas.
+            - NÃO sugira estratégias processuais.
+
+            LINGUAGEM OBRIGATÓRIA:
+            - Use: "A norma prevê a possibilidade...", "Em tese...", "Recomenda-se avaliar...".
+            - SEMPRE termine com a frase: "Esta informação não substitui consulta jurídica profissional. Para análise específica, recomendo agendar consulta com advogado."
+
+            CONTEXTO NORMATIVO: ${contextText}
+            
+            Entrada do usuário: ${textInput}`;
 
             const completion = await openai.chat.completions.create({
                 model: "gpt-4o-mini",

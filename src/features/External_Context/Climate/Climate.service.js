@@ -286,8 +286,7 @@ async function getCoordinates(cityState) {
     try {
         const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cityState)}&limit=1`;
         const response = await axios.get(url, {
-            headers: { 'User-Agent': 'MOHSIS-Bot/1.0' },
-            timeout: 15000
+            headers: { 'User-Agent': 'MOHSIS-Bot/1.0' }
         });
 
         if (response.data && response.data.length > 0) {

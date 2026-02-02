@@ -111,9 +111,15 @@ class AIAgentService {
                     await client.update({ conversation_stage: 'WAITING_APOIO_SUBOPTION' });
                     return APOIO_MENU;
                 }
-                if (input === '4') {
+                if (input === '4' || input.toLowerCase().includes('agendar')) {
                     await client.update({ conversation_stage: 'WAITING_LAWYER_CONTACT' });
                     return "📅 *Agendar consulta com o Dr. [Nome]*\n\nPara prosseguir com o agendamento, por favor informe (separado por vírgulas):\n1. Seu nome completo\n2. Município/estado do imóvel\n3. Tema principal\n4. Prioridade (sim/não)";
+                }
+
+                // Smart Redirects from Climate Result
+                if (input.toLowerCase().includes('nova consulta')) {
+                    await client.update({ conversation_stage: 'WAITING_CLIMATE_CITY' });
+                    return "🌦️ *Consulta a Dados Climáticos Públicos*\n\nInforme o município para consulta:\nExemplo: Uberlândia";
                 }
 
                 if (input.toLowerCase().includes('oi') || input.length < 5) return MENU_TEXT;

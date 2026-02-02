@@ -297,6 +297,9 @@ class AIAgentService {
                 // Log logic
                 console.log(`[LEAD] New Scheduling Request: ${textInput}`);
 
+                // FEEDBACK MSG
+                await UazapiService.sendMessage(clientNumber, `⏳ Enviando solicitação...`);
+
                 // --- INTEGRATION: BASEROW CRM ---
                 try {
                     const parts = textInput.split(',').map(p => p.trim());
@@ -318,6 +321,10 @@ class AIAgentService {
 
             // FALLBACK: RAG ROUTER (Simple Educational)
             console.log(`Routing to RAG Brain: ${input}`);
+
+            // FEEDBACK MSG
+            await UazapiService.sendMessage(clientNumber, `⏳ Analisando sua dúvida no banco jurídico...`);
+
             const embedding = await RAGService.generateEmbedding(textInput);
             const chunks = await RAGService.searchChunks(embedding);
             const contextText = chunks.map(c => `[Doc: ${c.source}]: ${c.text}`).join('\n\n');

@@ -223,24 +223,42 @@ class AIAgentService {
                 const ClimateService = require('../External_Context/Climate/Climate.service');
                 const locationData = client.farm_location;
 
-                // Simple date validation (V1: assume valid or last 30 days if error)
-                // For V1 MVP, we will fetch last 30 days if parsing fails or use the input if easy.
-                // Let's call getInmetData with default 30 days for now to ensure reliability, 
-                // or parse if simple.
-                // Reusing existing Method signature getInmetData(lat, lon, days) from Service.
-                // Note: The service currently accepts 'days' (lookback). 
-                // To support specific date range, we would need to update Service, 
-                // but for V1 speed, let's use a "Last 30 days" default or map input to days approximate.
+                // --- Date Parsing (DD/MM/YYYY) ---
+                const dateRegex = /(\d{2})[\/.-](\d{2})[\/.-](\d{4})/g;
+                const matches = [...textInput.matchAll(dateRegex)];
 
-                // Let's assume user wants recent data for now as per "Monitoring" context.
-                // Or try to parse "days ago" logic.
-                // For exact match with prompt "01/01/2024...", we would need the Service to support Start/End dates.
+                let customStartDate = null;
+                let customEndDate = null;
+                let days = 90; // Default
 
-                // NOTE: ClimateService.getInmetData takes (lat, lon, days).
-                // Let's just fetch 90 days (limit) to show robustness.
-                const days = 90;
+                if (matches.length >= 2) {
+                    // Start Date: YYYY-MM-DD
+                    const startMatch = matches[0];
+                    customStartDate = `${startMatch[3]}-${startMatch[2]}-${startMatch[1]}`;
 
-                const climateData = await ClimateService.getInmetData(locationData.latitude, locationData.longitude, days);
+                    // End Date: YYYY-MM-DD
+                    const endMatch = matches[1];
+                    customEndDate = `${endMatch[3]}-${endMatch[2]}-${endMatch[1]}`;
+
+                    console.log(`[CLIMATE] Parsed custom period: ${customStartDate} to ${customEndDate}`);
+                }
+                else if (matches.length === 1) {
+                    // Only start date found, assume 1 day or start->Now logic?
+                    // For V1.4 simplify: if only 1 date, assume Start -> +30 days
+                    const m = matches[0];
+                    customStartDate = `${m[3]}-${m[2]}-${m[1]}`;
+                    const s = new Date(customStartDate);
+                    s.setDate(s.getDate() + 30);
+                    customEndDate = s.toISOString().split('T')[0];
+                }
+
+                const climateData = await ClimateService.getInmetData(
+                    locationData.latitude,
+                    locationData.longitude,
+                    days,
+                    customStartDate,
+                    customEndDate
+                );
 
                 await client.update({ conversation_stage: 'MENU_SHOWN' });
 
@@ -249,9 +267,13 @@ class AIAgentService {
                     const totalRain = climateData.data.reduce((sum, day) => sum + (day.precipitation || 0), 0).toFixed(1);
                     const avgTemp = (climateData.data.reduce((sum, day) => sum + (day.tempAvg || 0), 0) / climateData.data.length).toFixed(1);
 
+                    const periodStr = (customStartDate && customEndDate)
+                        ? `${customStartDate} a ${customEndDate}`
+                        : `Últimos ${days} dias`;
+
                     return `🌦️ *DADOS CLIMÁTICOS — INMET*\n\n` +
                         `Estação: ${climateData.station.name}\n` +
-                        `Período: Últimos ${days} dias\n` +
+                        `Período: ${periodStr}\n` +
                         `Registros: ${climateData.metadata.dataPoints || climateData.data.length}\n\n` +
                         `📊 *RESUMO:*\n` +
                         `🌧️ Precipitação Total: ${totalRain} mm\n` +

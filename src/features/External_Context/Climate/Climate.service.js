@@ -124,17 +124,32 @@ function processInmetData(rawData) {
 /**
  * Obtém dados climáticos (Tenta INMET, se falhar ou vazio, tenta NASA)
  */
-async function getInmetData(latitude, longitude, days = 7) {
+async function getInmetData(latitude, longitude, days = 7, customStartDate = null, customEndDate = null) {
     // Validações
     if (days < 1 || days > 90) {
         throw new Error('Parâmetro "days" deve estar entre 1 e 90');
     }
 
     // Calcular período
-    const endDate = new Date();
-    const startDate = subDays(endDate, days);
-    const startStr = format(startDate, 'yyyy-MM-dd');
-    const endStr = format(endDate, 'yyyy-MM-dd');
+    let startDate;
+    let endDate;
+    let startStr;
+    let endStr;
+
+    if (customStartDate && customEndDate) {
+        // Use custom dates (format expected: YYYY-MM-DD or Date objects)
+        startDate = new Date(customStartDate);
+        endDate = new Date(customEndDate);
+        startStr = customStartDate.includes('-') ? customStartDate : format(startDate, 'yyyy-MM-dd');
+        endStr = customEndDate.includes('-') ? customEndDate : format(endDate, 'yyyy-MM-dd');
+        console.log(`[CLIMATE] Using custom dates: ${startStr} to ${endStr}`);
+    } else {
+        // Fallback to "last X days" logic
+        endDate = new Date();
+        startDate = subDays(endDate, days);
+        startStr = format(startDate, 'yyyy-MM-dd');
+        endStr = format(endDate, 'yyyy-MM-dd');
+    }
 
     // 1. TENTATIVA INMET
     try {

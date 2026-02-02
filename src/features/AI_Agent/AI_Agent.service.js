@@ -1,5 +1,6 @@
 const OpenAI = require('openai');
 const RAGService = require('../RAG_Core/RAG_Core.service');
+const BaserowService = require('../External_Context/Baserow/Baserow.service');
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -258,8 +259,23 @@ class AIAgentService {
 
             // FLOW 5: LAWYER SCHEDULING
             if (currentState === 'WAITING_LAWYER_CONTACT') {
-                // Log logic would go here
+                // Log logic
                 console.log(`[LEAD] New Scheduling Request: ${textInput}`);
+
+                // --- INTEGRATION: BASEROW CRM ---
+                try {
+                    const parts = textInput.split(',').map(p => p.trim());
+                    const leadData = {
+                        whatsapp: clientNumber,
+                        name: parts[0] || 'Desconhecido',
+                        location: parts[1] || 'Não informado',
+                        topic: parts[2] || 'Não informado',
+                        priority: parts[3] || 'Não'
+                    };
+                    await BaserowService.saveLead(leadData);
+                } catch (err) {
+                    console.error("Failed to process lead for Baserow:", err);
+                }
 
                 await client.update({ conversation_stage: 'MENU_SHOWN' });
                 return `✅ *Solicitação Recebida!*\n\nObrigado, ${textInput.split(',')[0]}! A equipe do Dr. [Nome] entrará em contato em breve para confirmar seu agendamento.\n\n[Voltar ao menu principal]`;

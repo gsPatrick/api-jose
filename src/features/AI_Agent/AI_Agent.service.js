@@ -1,6 +1,7 @@
 const OpenAI = require('openai');
 const RAGService = require('../RAG_Core/RAG_Core.service');
 const BaserowService = require('../External_Context/Baserow/Baserow.service');
+const UazapiService = require('../Uazapi/Uazapi.service');
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -193,6 +194,9 @@ class AIAgentService {
             // FLOW 2: CLIMA (BEGINNING: Input -> MIDDLE: API -> END: Verdict + CTA)
             if (currentState === 'WAITING_CLIMATE_CITY') {
                 const ClimateService = require('../External_Context/Climate/Climate.service');
+
+                // FEEDBACK MSG: Map search can be slow
+                await UazapiService.sendMessage(clientNumber, `🔍 Buscando informações sobre "${textInput}"... Aguarde um momento.`);
 
                 // 1. Geocoding
                 const coords = await ClimateService.getCoordinates(textInput);

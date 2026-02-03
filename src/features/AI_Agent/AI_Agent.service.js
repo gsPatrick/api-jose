@@ -303,6 +303,12 @@ class AIAgentService {
                 return `✅ *Solicitação Recebida!*\n\nObrigado, ${textInput.split(',')[0]}! A equipe do Dr. [Nome] entrará em contato em breve para confirmar seu agendamento.\n\n[Voltar ao menu principal]`;
             }
 
+            // --- NUMERIC PROTECTION (Anti-RAG for Menu numbers) ---
+            const isNumeric = /^\d+$/.test(input);
+            if (isNumeric && input.length <= 2) {
+                return `❌ *Opção inválida.*\n\nPor favor, escolha um dos números do menu ou descreva sua dúvida por extenso.\n\n` + MENU_TEXT;
+            }
+
             // FALLBACK: RAG ROUTER (Simple Educational)
             console.log(`Routing to RAG Brain: ${input}`);
 
@@ -312,7 +318,7 @@ class AIAgentService {
                 return cachedResponse;
             }
 
-            // FEEDBACK MSG
+            // FEEDBACK MSG (Only for non-cached real AI queries)
             await UazapiService.sendMessage(clientNumber, `⏳ Analisando sua dúvida no banco jurídico...`);
 
             const embedding = await RAGService.generateEmbedding(textInput);

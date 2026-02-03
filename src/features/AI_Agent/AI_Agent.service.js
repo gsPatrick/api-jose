@@ -26,7 +26,8 @@ class AIAgentService {
             const stage = client.conversation_stage || 'START';
 
             // 1. GLOBAL COMMANDS (Intersects everything)
-            if (lowerInput === 'm' || lowerInput === 'menu' || lowerInput === 'inicio' || lowerInput === 'início') {
+            const isMenuGreeting = ['m', 'menu', 'inicio', 'início', 'ola', 'olá', 'oi', 'oie'].includes(lowerInput);
+            if (isMenuGreeting) {
                 this.updateState(client, 'MENU');
                 return STATE_TEXTS.MENU;
             }
@@ -165,7 +166,7 @@ class AIAgentService {
 
             // --- AI FALLBACK / GREETING ---
             if (!responseText) {
-                if (stage === 'START' || stage === 'START_CHOBOT' || lowerInput.length < 3) {
+                if (stage === 'START' || stage === 'START_CHOBOT' || lowerInput.length <= 3) {
                     this.updateState(client, 'MENU');
                     return STATE_TEXTS.MENU;
                 }

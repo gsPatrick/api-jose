@@ -67,7 +67,10 @@ class AIAgentService {
                         break;
 
                     case 'MENU1':
-                        if (input === '1') { this.updateState(client, 'WAITING_CLIMATE_CITY'); responseText = "🌦️ *CLIMA*\nInforme o município:"; }
+                        if (input === '1') {
+                            this.updateState(client, 'WAITING_CLIMATE_CITY');
+                            responseText = `${STATE_TEXTS.M1CLIMA}\n\n🌦️ *Para consultar os dados reais de chuva da sua região, informe o nome do município abaixo:*`;
+                        }
                         else if (input === '2') { this.updateState(client, 'M1_CAIXA'); responseText = STATE_TEXTS.M1_CAIXA; }
                         else if (input === '3') { this.updateState(client, 'M1_PROPOSTA'); responseText = STATE_TEXTS.M1_PROPOSTA; }
                         else if (input === '4') { this.updateState(client, 'M1_CHECKLIST'); responseText = STATE_TEXTS.M1_CHECKLIST; }
@@ -99,6 +102,15 @@ class AIAgentService {
                     case 'TRIAGEMQ2':
                         this.updateState(client, 'TRIAGEMQ3', { last_triagem_q2: input });
                         responseText = STATE_TEXTS.TRIAGEMQ3;
+                        break;
+
+                    case 'MENU5':
+                        const policyNote = "\n\n⚠️ *Lembrete:* Isso é conteúdo informativo. Para aplicar ao seu caso, precisa análise humana.";
+                        if (input === '1') responseText = `📚 *PRORROGAÇÃO/CLIMA*\n\nEm caso de quebra de safra por clima, o Manual de Crédito Rural (MCR) prevê a possibilidade de prorrogação das dívidas conforme a capacidade de pagamento.${policyNote}`;
+                        else if (input === '2') responseText = `📚 *RENEGOCIAÇÃO*\n\nA renegociação permite ajustar taxas e prazos de contratos vigentes para evitar a inadimplência.${policyNote}`;
+                        else if (input === '3') responseText = `📚 *ALONGAMENTO*\n\nO alongamento reorganiza o cronograma de pagamento por um período maior, diluindo o peso das parcelas.${policyNote}`;
+                        else if (input === '4') responseText = `📚 *AMBIENTAL E CRÉDITO*\n\nPendências no CAR ou embargos ambientais podem impedir a liberação de novos recursos ou renovações.${policyNote}`;
+                        else if (input === '5') responseText = `📚 *GARANTIAS E RISCOS*\n\nConhecer o impacto de garantias reais (imóveis) e pessoais (aval) é fundamental antes de assinar contratos.${policyNote}`;
                         break;
                 }
             }

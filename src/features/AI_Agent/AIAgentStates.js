@@ -12,7 +12,7 @@ const POLICY_TEXT = `GUARDRAILS DO BOT:
 6) Dados mínimos com aviso de privacidade e opção SAIR/APAGAR.`;
 
 const STATE_TEXTS = {
-    "MENU": "Olá! 👋 Vi que você iniciou contato pelo nosso link/QR.\nEu sou o Mohsis, assistente informacional do escritório do Júnior Lopes, advogado no agronegócio.\nEu ajudo com informações gerais sobre:\ncrédito rural, organização de dívidas, garantias/patrimônio e pontos ambientais que impactam financiamento.\n⚠️ Importante:\nEsta conversa traz informações gerais e não substitui análise de contrato e documentos.\nPara orientação individualizada, o atendimento é feito por advogado(a) da equipe.\n\nQual tema você quer ver agora?\nMENU\n1) 💸 Parcela vencendo / dívida / cobrança\n2) 📆 Alongamento de prazo / reorganização de parcelas\n3) 🛡️ Garantias / risco sobre imóvel ou bens\n4) 🌳 CAR / embargo / ambiental e crédito\n5) 📚 Resumos: normas do crédito rural (em linguagem simples)\n0) 👤 Atendimento humano (advogado(a) da equipe)\n(Comandos: M | 0 | 8 | 9 | SAIR | APAGAR)",
+    "MENU": "Olá! 👋 Vi que você iniciou contato pelo nosso link/QR.\nEu sou o Mohsis, assistente informacional do escritório do Júnior Lopes, advogado no agronegócio.\nEuajudo com informações gerais sobre:\ncrédito rural, organização de dívidas, garantias/patrimônio e pontos ambientais que impactam financiamento.\n⚠️ Importante:\nEsta conversa traz informações gerais e não substitui análise de contrato e documentos.\nPara orientação individualizada, o atendimento é feito por advogado(a) da equipe.\n\nQual tema você quer ver agora?\nMENU\n1) 💸 Parcela vencendo / dívida / cobrança\n2) 📆 Alongamento de prazo / reorganização de parcelas\n3) 🛡️ Garantias / risco sobre imóvel ou bens\n4) 🌳 CAR / embargo / ambiental e crédito\n5) 📚 Resumos: normas do crédito rural (em linguagem simples)\n0) 👤 Atendimento humano (advogado(a) da equipe)\n(Comandos: M | 0 | 8 | 9 | SAIR | APAGAR)",
 
     "TRIAGEM8": "Certo. Vou fazer 3 perguntas rápidas para entender o tema (sem análise jurídica aqui).\n1) O que mais descreve o problema?\nA) Safra/clima (seca, chuva, praga)\nB) Preço/custo/caixa apertado\nC) Banco cobrou/ofereceu proposta\nD) Ambiental/CAR/embargo travou crédito\n(Responda com A, B, C ou D)",
 
@@ -36,6 +36,10 @@ const STATE_TEXTS = {
 
     "MENU2": "Certo. Escolha o tema:\n1) 🌱 Cultura/ciclo longo (retorno demora)\n2) 📆 Quero reduzir valor da parcela (mais prazo)\n3) 🔁 Diferença: prorrogar x alongar (simples)\n4) 🧾 Checklist para conversar com banco/organizar pedido\n5) ⚠️ Pontos de atenção (encargos/garantias)\n(0 atendimento humano | 9 documentos | M menu)",
 
+    "M2_CULTURA": "📌 Exemplo (hipotético): Culturas de ciclo longo (café, citros, cana) costumam ter prazos diferenciados.\n🧭 Informação geral: É essencial alinhar o fluxo de caixa com a colheita real. Sem documentos, não há como analisar a viabilidade.\n👉 Digite 9 para checklist | 0 para atendimento humano",
+
+    "M2_REDUZIR": "📌 Exemplo (hipotético): Você quer reduzir o valor da parcela anual aumentando o número de anos para pagar.\n🧭 Informação geral: Normalmente exige um pedido formal fundamentado na capacidade de pagamento.\n👉 Digite 9 para checklist | 0 para atendimento humano",
+
     "M2DIFERENCA": "Bem simples:\n• Prorrogar = adiar uma data/parcela.\n• Alongar = reorganizar o cronograma por um período maior.\n📌 Exemplo (hipotético): “Empurrar um vencimento” vs “replanejar todo o calendário”.\n👉 Se quiser, eu te envio checklist do que normalmente pedem. Digite 9 (checklist) ou 0 (atendimento humano)",
 
     "M2PONTOSATENCAO": "⚠️ Pontos de atenção (informação geral):\nAlterar prazo pode mudar custo total e condições de garantia.\n✅ Antes de assinar algo, geralmente é prudente:\n• comparar custo total (não só a parcela)\n• confirmar garantias exigidas\n• verificar se o prazo combina com o ciclo produtivo\n👉 Digite 0 para atendimento humano revisar proposta/documentos",
@@ -44,11 +48,23 @@ const STATE_TEXTS = {
 
     "M3_GARANTIA": "📌 Exemplo (hipotético): Você assinou financiamento com garantia e agora teme consequências.\n🧭 Informação geral: O que muda bastante é o tipo de garantia e as cláusulas do contrato. Sem o documento, eu não consigo orientar o seu caso aqui.\n✅ Para organizar:\n• contrato/CCB/CPR\n• documento da garantia (se houver)\n• extrato de parcelas\n👉 Digite 9 (checklist) ou 0 (atendimento humano)",
 
+    "M3_FAMILIA": "🧭 Informação geral: Propriedades usadas como residência ou pequena produção familiar podem ter proteções legais (impenhorabilidade). No entanto, renunciar a estas proteções em contrato muda a regra.\n👉 Digite 0 para atendimento humano",
+
+    "M3_RISCO": "🧭 Informação geral: Inadimplência, protestos e falta de comunicação com o banco aumentam drasticamente o risco de perda de bens.\n👉 Digite 9 (checklist) ou 0 para atendimento humano",
+
     "M3URGENTEJUDICIAL": "Entendi. Se já existe documento judicial, pode haver prazo.\n⚠️ Eu não consigo orientar estratégia por aqui.\nEnvie, se puder:\n• foto/print do documento\n• data do recebimento\n👉 Digite 0 para atendimento humano",
 
     "MENU4": "Certo. Escolha:\n1) 🧾 Entender situação do CAR (passos gerais)\n2) ⛔ Entender embargo e impacto em crédito (passos gerais)\n3) ✅ Checklist “antes de pedir financiamento”\n4) 🧭 O que fazer quando aparece pendência (passos gerais)\n5) 🌦️ ZARC (janela de plantio e risco – informação geral)\n(0 atendimento humano | 9 documentos | M menu)",
 
+    "M4_CAR": "🧭 Informação geral: Problemas no CAR (como reserva legal insuficiente) bloqueiam o crédito rural. O primeiro passo é verificar o status no sistema e ter o recibo em mãos.\n👉 Digite 0 para atendimento humano",
+
+    "M4_EMBARGO": "🧭 Informação geral: Embargos ambientais impedem financiamentos. É necessário entender se o embargo é por desmatamento ou sobreposição para buscar regularização.\n👉 Digite 0 para atendimento humano",
+
+    "M4_CHECKLIST_AMB": "✅ Checklist Ambiental: Recibo do CAR, Termos de Compromisso, Defesas prévias (se houver), Documentos da propriedade.\n👉 Digite 0 para atendimento humano",
+
     "M4_PENDENCIA": "📌 Exemplo (hipotético): Você foi ao banco e disseram que há pendência no CAR/embargo e o crédito travou.\n🧭 Passos gerais (sem análise do seu caso):\n1) identificar qual pendência aparece\n2) separar documentos disponíveis (CAR/prints/registro)\n3) verificar se é pendência cadastral, sobreposição ou restrição real\n4) organizar um plano de regularização (quando aplicável)\n⚠️ Para indicar o melhor caminho, é preciso ver os documentos.\n👉 Digite 9 (checklist) ou 0 (atendimento humano)",
+
+    "M4_ZARC": "🧭 Informação geral: O Zarc (Zoneamento Agrícola) define as janelas de plantio. Seguir o Zarc é obrigatório para acessar seguro e as principais linhas de crédito.\n👉 Digite M para menu",
 
     "MENU5": "Posso te passar um resumo em linguagem simples. Escolha:\n1) Prorrogação / atraso por safra/clima (noções gerais)\n2) Renegociação / refazer dívida (noções gerais)\n3) Alongamento / reorganizar prazo (noções gerais)\n4) Ambiental e crédito (noções gerais)\n5) Garantias e riscos (noções gerais)\n⚠️ Isso é conteúdo informativo. Para aplicar ao seu caso, precisa análise humana.\n(0 atendimento humano | M menu)",
 

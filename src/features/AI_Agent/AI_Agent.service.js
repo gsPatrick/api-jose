@@ -78,8 +78,8 @@ class AIAgentService {
                         break;
 
                     case 'MENU2':
-                        if (input === '1') { responseText = STATE_TEXTS.MENU2; }
-                        else if (input === '2') { responseText = STATE_TEXTS.MENU2; }
+                        if (input === '1') { this.updateState(client, 'M2_CULTURA'); responseText = STATE_TEXTS.M2_CULTURA; }
+                        else if (input === '2') { this.updateState(client, 'M2_REDUZIR'); responseText = STATE_TEXTS.M2_REDUZIR; }
                         else if (input === '3') { this.updateState(client, 'M2_DIFERENCA'); responseText = STATE_TEXTS.M2_DIFERENCA; }
                         else if (input === '4') { responseText = STATE_TEXTS.DOCS9; }
                         else if (input === '5') { this.updateState(client, 'M2PONTOSATENCAO'); responseText = STATE_TEXTS.M2PONTOSATENCAO; }
@@ -87,11 +87,18 @@ class AIAgentService {
 
                     case 'MENU3':
                         if (input === '1') { this.updateState(client, 'M3_GARANTIA'); responseText = STATE_TEXTS.M3_GARANTIA; }
+                        else if (input === '2') { this.updateState(client, 'M3_FAMILIA'); responseText = STATE_TEXTS.M3_FAMILIA; }
+                        else if (input === '3') { this.updateState(client, 'M3_RISCO'); responseText = STATE_TEXTS.M3_RISCO; }
+                        else if (input === '4') { responseText = STATE_TEXTS.DOCS9; }
                         else if (input === '5') { this.updateState(client, 'M3URGENTEJUDICIAL'); responseText = STATE_TEXTS.M3URGENTEJUDICIAL; }
                         break;
 
                     case 'MENU4':
-                        if (input === '4') { this.updateState(client, 'M4_PENDENCIA'); responseText = STATE_TEXTS.M4_PENDENCIA; }
+                        if (input === '1') { this.updateState(client, 'M4_CAR'); responseText = STATE_TEXTS.M4_CAR; }
+                        else if (input === '2') { this.updateState(client, 'M4_EMBARGO'); responseText = STATE_TEXTS.M4_EMBARGO; }
+                        else if (input === '3') { this.updateState(client, 'M4_CHECKLIST_AMB'); responseText = STATE_TEXTS.M4_CHECKLIST_AMB; }
+                        else if (input === '4') { this.updateState(client, 'M4_PENDENCIA'); responseText = STATE_TEXTS.M4_PENDENCIA; }
+                        else if (input === '5') { this.updateState(client, 'M4_ZARC'); responseText = STATE_TEXTS.M4_ZARC; }
                         break;
 
                     case 'TRIAGEM8':
@@ -124,8 +131,8 @@ class AIAgentService {
                 }
                 // TRIAGEM Q3 (Letters or N)
                 else if (stage === 'TRIAGEMQ3') {
-                    this.updateState(client, 'TRIAGEM_RESULTADO', { last_triagem_q3: input });
-                    responseText = STATE_TEXTS.TRIAGEM_RESULTADO;
+                    this.updateState(client, 'TRIAGEMRESULTADO', { last_triagem_q3: input });
+                    responseText = STATE_TEXTS.TRIAGEMRESULTADO;
                 }
                 // HANDOFF FLOW (Save to Baserow when finished)
                 else if (stage === 'HANDOFF0') {

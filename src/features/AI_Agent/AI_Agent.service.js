@@ -21,8 +21,9 @@ class AIAgentService {
             const MENU_TEXT = `✅ Ótimo! Como posso ajudar?\n\nEscolha uma opção:\n\n` +
                 `[🌱 1] Monitoramento da Safra\n` +
                 `[📈 2] Mercado e Produção\n` +
-                `[⚖️ 3] Apoio e Jurídico\n` +
-                `[📞 4] Falar com o Dr. [Nome]\n\n` +
+                `[⚖️ 3] Alongamento e Prorrogação\n` +
+                `[📅 4] Análise de caso Individual (Agendar)\n\n` +
+                `[0] 🔙 Voltar / Menu Inicial\n\n` +
                 `_Responda com o número (1, 2, 3 ou 4)_`;
 
             const MONITORAMENTO_MENU = `🌱 *MONITORAMENTO DA SAFRA*\n\nEscolha uma opção:\n\n` +
@@ -37,10 +38,10 @@ class AIAgentService {
                 `[3] 🐄 Pecuária e indicadores\n\n` +
                 `[0] 🔙 Voltar ao menu principal`;
 
-            const APOIO_MENU = `⚖️ *APOIO E JURÍDICO*\n\nEscolha uma opção:\n\n` +
-                `[1] 📘 Informações gerais sobre regras\n` +
-                `[2] 📅 Agendar consulta com advogado\n` +
-                `[3] 📄 Documentos úteis\n\n` +
+            const RULES_MENU = `⚖️ *ALONGAMENTO E PRORROGAÇÃO*\n\nEscolha um tema para informação geral:\n\n` +
+                `[A] Prorrogação de dívidas\n` +
+                `[B] Alongamento de contratos\n` +
+                `[C] Renegociação\n\n` +
                 `[0] 🔙 Voltar ao menu principal`;
 
             const TERMS_TEXT = `🔒 *TERMOS DE CIÊNCIA E PRIVACIDADE*\n\n` +
@@ -108,12 +109,16 @@ class AIAgentService {
                     return MERCADO_MENU;
                 }
                 if (input === '3') {
-                    await client.update({ conversation_stage: 'WAITING_APOIO_SUBOPTION' });
-                    return APOIO_MENU;
+                    await client.update({ conversation_stage: 'WAITING_RULES_SUBOPTION' });
+                    return RULES_MENU;
                 }
-                if (input === '4' || input.toLowerCase().includes('agendar')) {
+                if (input === '4' || input.toLowerCase().includes('agendar') || input.toLowerCase().includes('individual')) {
                     await client.update({ conversation_stage: 'WAITING_LAWYER_CONTACT' });
-                    return "📅 *Agendar consulta com o Dr. [Nome]*\n\nPara prosseguir com o agendamento, por favor informe (separado por vírgulas):\n1. Seu nome completo\n2. Município/estado do imóvel\n3. Tema principal\n4. Prioridade (sim/não)";
+                    return "📅 *Análise de caso Individual (Agendar)*\n\nPara prosseguir com o agendamento, por favor informe (separado por vírgulas):\n1. Seu nome completo\n2. Município/estado do imóvel\n3. Tema principal\n4. Prioridade (sim/não)";
+                }
+                if (input === '0') {
+                    await client.update({ conversation_stage: 'MENU_SHOWN' });
+                    return MENU_TEXT;
                 }
 
                 // Smart Redirects from Climate Result
@@ -160,39 +165,18 @@ class AIAgentService {
                 return MERCADO_MENU;
             }
 
-            // --- SUBMENU: APOIO E JURÍDICO ---
-            if (currentState === 'WAITING_APOIO_SUBOPTION') {
+            // --- SUBMENU: RULES (Promoted Menu 3) ---
+            if (currentState === 'WAITING_RULES_SUBOPTION') {
                 if (input === '0') {
                     await client.update({ conversation_stage: 'MENU_SHOWN' });
                     return MENU_TEXT;
                 }
-                if (input === '1') {
-                    await client.update({ conversation_stage: 'WAITING_RULES_SUBOPTION' });
-                    return "📘 *INFORMAÇÕES GERAIS SOBRE REGRAS*\n\nEscolha um tema:\n[A] Prorrogação de dívidas\n[B] Alongamento de contratos\n[C] Renegociação\n\n[0] Voltar";
-                }
-                if (input === '2') {
-                    await client.update({ conversation_stage: 'WAITING_LAWYER_CONTACT' });
-                    return "📅 *Agendar consulta com advogado*\n\nPara organizar o contato, informe:\nNome, Cidade, Tema e Prioridade.";
-                }
-                if (input === '3') {
-                    await client.update({ conversation_stage: 'WAITING_APOIO_SUBOPTION' });
-                    return "📄 *DOCUMENTOS ÚTEIS*\n\nReunir documentos ajuda a aproveitar melhor a consulta:\n• Contratos bancários rurais\n• Matrícula do imóvel\n• Notas fiscais de safra\n• Laudos meteorológicos/agronômicos\n\n[Voltar]";
-                }
-                return APOIO_MENU;
-            }
-
-            // --- SUBMENU: RULES (APOIO) ---
-            if (currentState === 'WAITING_RULES_SUBOPTION') {
-                if (input === '0') {
-                    await client.update({ conversation_stage: 'WAITING_APOIO_SUBOPTION' });
-                    return APOIO_MENU;
-                }
-                const ruleInfo = "📘 *Informação Geral*\n\nAs regras de crédito rural (MCR) permitem ajustes em parcelas sob certas condições (clima, preço, pragas).\n\n⚠️ Nota: A aplicação depende de análise contratual individual.\n\n[Voltar]";
-                if (['a', 'b', 'c'].includes(input.toLowerCase())) {
+                const ruleInfo = "📘 *Informação Geral*\n\nAs regras de crédito rural (MCR) permitem ajustes em parcelas sob certas condições (clima, preço, pragas).\n\n⚠️ Nota: A aplicação depende de análise contratual individual.\n\n[0] Voltar";
+                if (['a', 'b', 'c', 'A', 'B', 'C'].includes(input)) {
                     await client.update({ conversation_stage: 'WAITING_RULES_SUBOPTION' });
                     return ruleInfo;
                 }
-                return "📘 *REGRAS RURAIS*\nEscolha [A], [B] ou [C] ou [0] para voltar.";
+                return RULES_MENU;
             }
 
             // --- REPLICABLE FLOW LOGIC (BEGINNING -> MIDDLE -> END) ---

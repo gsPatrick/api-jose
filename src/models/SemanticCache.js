@@ -20,7 +20,7 @@ const SemanticCache = sequelize.define('SemanticCache', {
         allowNull: false,
     },
     embedding: {
-        type: DataTypes.JSONB, // Stores the vector as JSON array
+        type: DataTypes.VECTOR(1536), // PostgreSQL + pgvector
         allowNull: false,
     },
     hits: {
@@ -30,15 +30,20 @@ const SemanticCache = sequelize.define('SemanticCache', {
 }, {
     tableName: 'SemanticCaches',
     timestamps: true,
-    hooks: {
-        afterSync: async () => {
-            // Indexação HNSW para busca vetorial ultra-rápida (PostgreSQL + pgvector)
-            await sequelize.query(`
-                CREATE INDEX IF NOT EXISTS "semantic_cache_embedding_idx" 
-                ON "SemanticCaches" 
-                USING hnsw ((embedding::vector(1536)) vector_cosine_ops);
-            `);
-        }
+});
+
+// Hook para criar o índice HNSW
+SemanticCache.afterSync(async () => {
+    try {
+        // Indexação HNSW para busca vetorial ultra-rápida
+        await sequelize.query(`
+            CREATE INDEX IF NOT EXISTS "semantic_cache_embedding_idx" 
+            ON "SemanticCaches" 
+            USING hnsw (embedding vector_cosine_ops);
+        `);
+        console.log('HNSW Index created on SemanticCaches.embedding');
+    } catch (err) {
+        console.error('Error creating SemanticCache HNSW index:', err);
     }
 });
 

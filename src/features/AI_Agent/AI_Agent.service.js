@@ -3,7 +3,11 @@ const RAGService = require('../RAG_Core/RAG_Core.service');
 const BaserowService = require('../External_Context/Baserow/Baserow.service');
 const ClientService = require('../Client/Client.service');
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const axiosConfig = require('../../config/axios.config');
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+    httpAgent: axiosConfig.defaults.httpAgent
+});
 
 // --- DETERMINISTIC STATIC TEXTS ---
 const MENU_TEXT = `✅ Ótimo! Como posso ajudar?\n\nEscolha uma opção:\n\n` +
@@ -35,6 +39,9 @@ class AIAgentService {
     }
 
     async generateResponse(clientNumber, textInput) {
+        const globalStart = Date.now();
+        console.log(`[AGENT_START] Message from ${clientNumber}: "${textInput.substring(0, 30)}"`);
+
         const UazapiService = require('../Uazapi/Uazapi.service');
         const input = textInput.trim();
         const lowerInput = input.toLowerCase();
@@ -42,6 +49,8 @@ class AIAgentService {
         // 1. FAST PATH: Greetings (Deterministic)
         if (GREETINGS.some(g => lowerInput === g || lowerInput.startsWith(g + ' '))) {
             const client = await ClientService.findOrCreateClient(clientNumber);
+            console.log(`[AGENT_TIME] Greeting path (Stage: ${client.conversation_stage}) took ${Date.now() - globalStart}ms`);
+
             if (lowerInput === 'termos') {
                 this.updateState(client, 'WAITING_TERMS');
                 return TERMS_TEXT;
@@ -58,6 +67,7 @@ class AIAgentService {
         if (/^\d+$/.test(input) && input.length <= 2) {
             const client = await ClientService.findOrCreateClient(clientNumber);
             const currentState = client.conversation_stage;
+            console.log(`[AGENT_TIME] Numeric path (Stage: ${currentState}) took ${Date.now() - globalStart}ms`);
 
             // Simple Switch Router - ZERO AI INVOLVED
             switch (currentState) {
@@ -120,9 +130,13 @@ class AIAgentService {
 
         // 5. AI PATH (RAG) - Only for complex text
         console.log(`[RAG] Processing text query: ${input}`);
+        const ragStart = Date.now();
         const embedding = await RAGService.generateEmbedding(input);
         const cached = await RAGService.getSemanticHit(embedding);
-        if (cached) return cached;
+        if (cached) {
+            console.log(`[AGENT_TIME] Semantic cache hit in ${Date.now() - ragStart}ms`);
+            return cached;
+        }
 
         UazapiService.sendMessage(clientNumber, `⏳ Analisando no banco jurídico...`);
         const chunks = await RAGService.searchChunks(embedding);
@@ -136,6 +150,8 @@ class AIAgentService {
         });
         const response = completion.choices[0].message.content;
         RAGService.learnResponse(input, embedding, response).catch(() => { });
+
+        console.log(`[AGENT_TIME] Full RAG path took ${Date.now() - ragStart}ms. Total: ${Date.now() - globalStart}ms`);
         return response;
     }
 }

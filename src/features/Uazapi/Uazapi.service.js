@@ -1,4 +1,4 @@
-const axios = require('axios');
+const axios = require('../../config/axios.config');
 const MediaService = require('../Media_Processor/Media_Processor.service');
 const ClientService = require('../Client/Client.service');
 
@@ -39,6 +39,7 @@ class UazapiService {
                 linkPreview: true
             };
 
+            const start = Date.now();
             const response = await axios.post(`${this.baseUrl}/send/text`, payload, {
                 headers: {
                     'token': this.token,
@@ -46,8 +47,9 @@ class UazapiService {
                     'Content-Type': 'application/json'
                 }
             });
+            const duration = Date.now() - start;
 
-            console.log(`Message sent to ${phone} via Uazapi. ID: ${response.data?.messageId || 'unknown'}`);
+            console.log(`[UAZAPI_TIME] Message sent to ${phone} in ${duration}ms. ID: ${response.data?.messageId || 'unknown'}`);
         } catch (error) {
             console.error("Error sending Uazapi message:", error.response?.data || error.message);
         }

@@ -28,20 +28,18 @@ app.get('/health', (req, res) => res.status(200).send('OK'));
 const PORT = process.env.PORT || 3000;
 
 const startServer = async () => {
+    const start = Date.now();
     await connectDB();
 
     // Pre-load external caches (Climate stations etc)
     const ClimateService = require('./src/features/External_Context/Climate/Climate.service');
     ClimateService.preloadStations().catch(err => console.error("Failed to pre-load stations:", err.message));
 
-    // Sync models
-    // In production, use migrations instead of sync()
-    // Using alter: true to update tables if they exist
-    await sequelize.sync({ alter: true });
-    console.log('Database Synced');
+    // Sync models - Avoid alter:true in production/hot restarts
+    await sequelize.sync();
 
     app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
+        console.log(`[STARTUP] Server ready on port ${PORT} in ${Date.now() - start}ms`);
     });
 };
 

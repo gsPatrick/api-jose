@@ -1,4 +1,4 @@
-const axios = require('axios');
+const axios = require('../../../config/axios.config');
 const { format, subDays } = require('date-fns');
 const config = require('../../../config/apis.config');
 

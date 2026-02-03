@@ -3,10 +3,10 @@ const { sequelize } = require('../../config/db');
 const LegalChunk = require('../../models/LegalChunk');
 const { QueryTypes } = require('sequelize');
 
-const axiosConfig = require('../../config/axios.config');
+const { httpsAgent } = require('../../config/axios.config');
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
-    httpAgent: axiosConfig.defaults.httpAgent
+    httpAgent: httpsAgent
 });
 
 const SemanticCache = require('../../models/SemanticCache');

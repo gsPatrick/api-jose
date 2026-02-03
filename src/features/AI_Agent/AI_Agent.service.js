@@ -3,10 +3,10 @@ const RAGService = require('../RAG_Core/RAG_Core.service');
 const BaserowService = require('../External_Context/Baserow/Baserow.service');
 const ClientService = require('../Client/Client.service');
 
-const axiosConfig = require('../../config/axios.config');
+const { httpsAgent } = require('../../config/axios.config');
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
-    httpAgent: axiosConfig.defaults.httpAgent
+    httpAgent: httpsAgent
 });
 
 // --- DETERMINISTIC STATIC TEXTS ---

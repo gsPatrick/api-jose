@@ -1,4 +1,4 @@
-const axios = require('../../config/axios.config');
+const { axios } = require('../../config/axios.config');
 const MediaService = require('../Media_Processor/Media_Processor.service');
 const ClientService = require('../Client/Client.service');
 

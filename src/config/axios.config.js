@@ -12,4 +12,9 @@ const axiosInstance = axios.create({
     timeout: 30000,
 });
 
-module.exports = axiosInstance;
+// Export both the instance and the agents for services like OpenAI SDK
+module.exports = {
+    axios: axiosInstance,
+    httpAgent,
+    httpsAgent
+};

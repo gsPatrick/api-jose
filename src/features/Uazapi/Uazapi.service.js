@@ -162,8 +162,11 @@ class UazapiService {
 
                 if (finalText) {
                     console.log(`Received text from ${phone}: ${finalText}`);
-                    const aiResponse = await AIAgentService.generateResponse(phone, finalText);
-                    await this.sendMessage(phone, aiResponse);
+                    // NON-BLOCKING Execution
+                    (async () => {
+                        const aiResponse = await AIAgentService.generateResponse(phone, finalText);
+                        this.sendMessage(phone, aiResponse);
+                    })().catch(err => console.error("[NON_BLOCKING_AI] Error:", err.message));
                 }
             }
 
@@ -187,9 +190,12 @@ class UazapiService {
 
                 if (base64Audio) {
                     console.log(`Received audio (Base64) from ${phone}`);
-                    const transcription = await MediaService.transcribeAudio(base64Audio, true);
-                    const aiResponse = await AIAgentService.generateResponse(phone, transcription);
-                    await this.sendMessage(phone, aiResponse);
+                    // NON-BLOCKING Execution
+                    (async () => {
+                        const transcription = await MediaService.transcribeAudio(base64Audio, true);
+                        const aiResponse = await AIAgentService.generateResponse(phone, transcription);
+                        this.sendMessage(phone, aiResponse);
+                    })().catch(err => console.error("[NON_BLOCKING_AUDIO] Error:", err.message));
                 }
                 else {
                     // Fallback to URL method (likely to fail if encrypted)
@@ -203,9 +209,12 @@ class UazapiService {
                     if (audioUrl) {
                         console.log(`Received audio from ${phone}: ${audioUrl}`);
                         try {
-                            const transcription = await MediaService.transcribeAudio(audioUrl, false);
-                            const aiResponse = await AIAgentService.generateResponse(phone, transcription);
-                            await this.sendMessage(phone, aiResponse);
+                            // NON-BLOCKING Execution
+                            (async () => {
+                                const transcription = await MediaService.transcribeAudio(audioUrl, false);
+                                const aiResponse = await AIAgentService.generateResponse(phone, transcription);
+                                this.sendMessage(phone, aiResponse);
+                            })().catch(err => console.error("[NON_BLOCKING_AUDIO_URL] Error:", err.message));
                         } catch (err) {
                             console.error("Audio Processing Failed:", err.message);
                             await this.sendMessage(phone, "⚠️ Não consegui baixar seu áudio.");
@@ -235,13 +244,14 @@ class UazapiService {
                 // If we have base64, we need to pass a Data URI to OpenAI Vision
                 if (base64Image) {
                     console.log(`Received image (Base64) from ${phone}`);
-                    const dataUri = `data:image/jpeg;base64,${base64Image}`;
-                    const extractionData = await MediaService.extractDataFromImage(dataUri);
-
-                    // Route to AI Agent for analysis instead of just static text
-                    const analysisInput = `[DADOS_DOCUMENTO]: ${JSON.stringify(extractionData)}`;
-                    const aiResponse = await AIAgentService.generateResponse(phone, analysisInput);
-                    await this.sendMessage(phone, aiResponse);
+                    // NON-BLOCKING Execution
+                    (async () => {
+                        const dataUri = `data:image/jpeg;base64,${base64Image}`;
+                        const extractionData = await MediaService.extractDataFromImage(dataUri);
+                        const analysisInput = `[DADOS_DOCUMENTO]: ${JSON.stringify(extractionData)}`;
+                        const aiResponse = await AIAgentService.generateResponse(phone, analysisInput);
+                        this.sendMessage(phone, aiResponse);
+                    })().catch(err => console.error("[NON_BLOCKING_IMAGE] Error:", err.message));
                 }
                 else {
                     // Fallback to URL
@@ -255,10 +265,13 @@ class UazapiService {
                     if (imageUrl) {
                         console.log(`Received image from ${phone}: ${imageUrl}`);
                         try {
-                            const extractionData = await MediaService.extractDataFromImage(imageUrl);
-                            const analysisInput = `[DADOS_DOCUMENTO]: ${JSON.stringify(extractionData)}`;
-                            const aiResponse = await AIAgentService.generateResponse(phone, analysisInput);
-                            await this.sendMessage(phone, aiResponse);
+                            // NON-BLOCKING Execution
+                            (async () => {
+                                const extractionData = await MediaService.extractDataFromImage(imageUrl);
+                                const analysisInput = `[DADOS_DOCUMENTO]: ${JSON.stringify(extractionData)}`;
+                                const aiResponse = await AIAgentService.generateResponse(phone, analysisInput);
+                                this.sendMessage(phone, aiResponse);
+                            })().catch(err => console.error("[NON_BLOCKING_IMAGE_URL] Error:", err.message));
                         } catch (err) {
                             console.error("Image Processing Failed:", err.message);
                             await this.sendMessage(phone, "⚠️ Não consegui processar a imagem do documento.");

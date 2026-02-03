@@ -2,15 +2,20 @@ const UazapiService = require('./Uazapi.service');
 
 exports.webhook = async (req, res) => {
     // 1. FAST FILTER: Only process "messages" EventType
-    // This ignores EventType: "chats", "messages_update" (Read receipts), etc.
     if (!req.body || req.body.EventType !== 'messages') {
         return res.status(200).send('Event Ignored');
     }
 
-    // 2. Return 200 immediately to acknowledge receipt
+    // 2. CRITICAL: Ignore messages sent BY the bot (fromMe)
+    // This prevents infinite loops where the bot responds to its own messages.
+    if (req.body.message && req.body.message.fromMe === true) {
+        return res.status(200).send('Self-message Ignored');
+    }
+
+    // 3. Return 200 immediately to acknowledge receipt
     res.status(200).send('OK');
 
-    // 3. Process asynchronously
+    // 4. Process asynchronously
     try {
         await UazapiService.processWebhook(req.body);
     } catch (err) {

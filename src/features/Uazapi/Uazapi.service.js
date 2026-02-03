@@ -148,8 +148,6 @@ class UazapiService {
                 return;
             }
 
-            // Ensure client exists
-            await ClientService.findOrCreateClient(phone);
 
             // Determine Message Type - checking multiple fields for resilience across versions
             const type = messageData.type; // 'text' OR 'media'

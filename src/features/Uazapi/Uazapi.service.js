@@ -4,39 +4,18 @@ const ClientService = require('../Client/Client.service');
 
 class UazapiService {
     constructor() {
-        // subdomain and token from .env
-        this.subdomain = process.env.UAZAPI_SUBDOMAIN || 'api';
+        this.baseUrl = process.env.UAZAPI_SUBDOMAIN;
         this.token = process.env.UAZAPI_TOKEN;
-
-        // If subdomain is full URL, use it directly. Otherwise construct it.
-        if (this.subdomain.startsWith('http')) {
-            this.baseUrl = this.subdomain;
-        } else {
-            this.baseUrl = `https://${this.subdomain}.uazapi.com`;
-        }
     }
 
-    /**
-     * Sends a text message via Uazapi
-     * Endpoint: POST /send/text
-     */
-    async sendMessage(phone, content) {
+    async sendMessage(phone, message) {
+        if (!message) return;
+
         try {
-            if (!this.token) {
-                console.error("Uazapi Token not configured.");
-                return;
-            }
-
-            // If content is an object with 'listMessage', use sendListMessage instead
-            if (typeof content === 'object' && content.listMessage) {
-                return await this.sendListMessage(phone, content.listMessage);
-            }
-
-            // Default Text Message
             const payload = {
                 number: phone,
-                text: typeof content === 'string' ? content : JSON.stringify(content),
-                linkPreview: true
+                text: message,
+                linkPreview: false // Disabled for maximum reliability and speed
             };
 
             const start = Date.now();
@@ -49,251 +28,67 @@ class UazapiService {
             });
             const duration = Date.now() - start;
 
-            console.log(`[UAZAPI_TIME] Message sent to ${phone} in ${duration}ms. ID: ${response.data?.messageId || 'unknown'}`);
+            // Log detailed response for debugging if needed, but keep console clean
+            const resData = response.data;
+            console.log(`[UAZAPI_SEND] Sent to ${phone} in ${duration}ms. Status: ${resData.status || 'OK'}`);
         } catch (error) {
-            console.error("Error sending Uazapi message:", error.response?.data || error.message);
+            console.error("[UAZAPI_ERROR] Failed to send message:", error.response?.data || error.message);
         }
     }
 
-    /**
-     * Sends a List Message (Menu) via Uazapi
-     * Endpoint: POST /send/list
-     */
-    async sendListMessage(phone, listData) {
-        try {
-            const payload = {
-                number: phone,
-                title: listData.title,
-                description: listData.description,
-                buttonText: listData.buttonText || "Abrir Menu",
-                sections: listData.sections
-            };
-
-            const response = await axios.post(`${this.baseUrl}/send/list`, payload, {
-                headers: {
-                    'token': this.token,
-                    'apikey': this.token,
-                    'Content-Type': 'application/json'
-                }
-            });
-            console.log(`List Message sent to ${phone}. ID: ${response.data?.messageId || 'unknown'}`);
-        } catch (error) {
-            console.error("Error sending List Message:", error.response?.data || error.message);
-            // Fallback to text if List fails (optional resilience)
-            await this.sendMessage(phone, `${listData.title}\n${listData.description}\n\n(Digite o número da opção desejada)`);
-        }
-    }
-
-    /**
-     * Downloads media from a message ID
-     * Endpoint: POST /message/download
-     */
-    async downloadMedia(messageId) {
-        try {
-            const payload = {
-                id: messageId,
-                return_base64: true,
-                return_link: false,
-                generate_mp3: false // Keep original format (ogg usually) for Whisper
-            };
-
-            const response = await axios.post(`${this.baseUrl}/message/download`, payload, {
-                headers: {
-                    'token': this.token,
-                    'apikey': this.token,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (response.data && response.data.base64Data) {
-                return response.data.base64Data;
-            } else if (response.data && response.data.base64) {
-                return response.data.base64;
-            }
-            return null;
-        } catch (error) {
-            console.error("Error downloading media from API:", error.response?.data || error.message);
-            return null;
-        }
-    }
-
-    /**
-     * Process incoming webhook events
-     * NOTE: Payload structure is inferred as generic since documentation didn't explicitly detail the INCOMING JSON.
-     * We will log the payload to help with debugging.
-     */
     async processWebhook(payload) {
+        // Since we now filter in the controller, we know EventType is 'messages'
+        const message = payload.message;
+        const phone = message.chatid.split('@')[0];
+
+        // Ensure AIAgentService is loaded (Avoiding top-level circular dep)
         const AIAgentService = require('../AI_Agent/AI_Agent.service');
-        try {
-            console.log("Uazapi Webhook Payload Received:", JSON.stringify(payload, null, 2));
 
-            // Check if it's a message event
-            // Based on logs: EventType: "messages"
-            // The message data is inside payload.message
-            if (payload.EventType !== 'messages' || !payload.message) {
-                return;
+        // Handle text messages
+        if (message.type === 'text' || message.text) {
+            const finalText = message.text || message.content;
+            if (finalText) {
+                // Non-blocking processing
+                (async () => {
+                    const aiResponse = await AIAgentService.generateResponse(phone, finalText);
+                    if (aiResponse) await this.sendMessage(phone, aiResponse);
+                })().catch(err => console.error("[ASYNC_PROCESS_ERROR]:", err.message));
             }
+        }
 
-            const messageData = payload.message;
+        // Handle media (Audio)
+        if (message.type === 'audio' || message.mediaType === 'audio') {
+            const base64Audio = message.content?.base64 || message.base64;
+            const audioUrl = message.content?.url || message.url;
 
-            // Ignore messages sent by the API itself or by the owner
-            if (messageData.fromMe || messageData.wasSentByApi) return;
-
-            // Extract sender phone number
-            // Structure: "chatid": "557182862912@s.whatsapp.net" or "sender_pn": "557182862912@s.whatsapp.net"
-            // We need to clean the "@s.whatsapp.net" suffix
-            let rawPhone = messageData.chatid || messageData.sender_pn;
-            const phone = rawPhone ? rawPhone.split('@')[0] : null;
-
-            if (!phone) {
-                console.warn("Could not identify sender phone number in webhook payload.");
-                return;
-            }
-
-
-            // Determine Message Type - checking multiple fields for resilience across versions
-            const type = messageData.type; // 'text' OR 'media'
-            const mediaType = messageData.mediaType; // 'ptt', 'image'
-
-            // --- TEXT MESSAGE ---
-            if (type === 'text' || (type === 'extended' && messageData.text)) {
-                const textContent = messageData.text || messageData.content; // Content is usually string for text
-
-                // If content is an object (common in some libs), try extracting text property
-                const finalText = typeof textContent === 'object' ? textContent.text : textContent;
-
-                if (finalText) {
-                    console.log(`Received text from ${phone}: ${finalText}`);
-                    // NON-BLOCKING Execution
-                    (async () => {
-                        const aiResponse = await AIAgentService.generateResponse(phone, finalText);
-                        this.sendMessage(phone, aiResponse);
-                    })().catch(err => console.error("[NON_BLOCKING_AI] Error:", err.message));
-                }
-            }
-
-            // --- AUDIO MESSAGE ---
-            // --- AUDIO MESSAGE ---
-            else if (mediaType === 'audio' || mediaType === 'ptt' || type === 'audio') {
-                // Audio processing
-                // Check if Base64 is available in payload
-                let base64Audio = messageData.base64 || (messageData.content ? messageData.content.base64 : null);
-
-                // If not in payload, try fetching via API
-                if (!base64Audio && (messageData.id || messageData.key?.id)) {
-                    const messageId = messageData.id || messageData.key.id;
-                    console.log(`Fetching audio media from API for message ID: ${messageId}`);
-                    try {
-                        base64Audio = await this.downloadMedia(messageId);
-                    } catch (dlError) {
-                        console.error("Failed to download media via API:", dlError.message);
-                    }
-                }
-
+            (async () => {
+                let transcription = "";
                 if (base64Audio) {
-                    console.log(`Received audio (Base64) from ${phone}`);
-                    // NON-BLOCKING Execution
-                    (async () => {
-                        const transcription = await MediaService.transcribeAudio(base64Audio, true);
-                        const aiResponse = await AIAgentService.generateResponse(phone, transcription);
-                        this.sendMessage(phone, aiResponse);
-                    })().catch(err => console.error("[NON_BLOCKING_AUDIO] Error:", err.message));
-                }
-                else {
-                    // Fallback to URL method (likely to fail if encrypted)
-                    let audioUrl = null;
-                    if (messageData.content && messageData.content.URL) {
-                        audioUrl = messageData.content.URL;
-                    } else {
-                        audioUrl = messageData.mediaUrl || messageData.url || messageData.file;
-                    }
-
-                    if (audioUrl) {
-                        console.log(`Received audio from ${phone}: ${audioUrl}`);
-                        try {
-                            // NON-BLOCKING Execution
-                            (async () => {
-                                const transcription = await MediaService.transcribeAudio(audioUrl, false);
-                                const aiResponse = await AIAgentService.generateResponse(phone, transcription);
-                                this.sendMessage(phone, aiResponse);
-                            })().catch(err => console.error("[NON_BLOCKING_AUDIO_URL] Error:", err.message));
-                        } catch (err) {
-                            console.error("Audio Processing Failed:", err.message);
-                            await this.sendMessage(phone, "⚠️ Não consegui baixar seu áudio.");
-                        }
-                    } else {
-                        console.warn(`Audio received from ${phone} but no URL or Base64 found.`);
-                    }
-                }
-            }
-
-            // --- IMAGE MESSAGE (OCR) ---
-            else if (mediaType === 'image' || type === 'image') {
-                // Check payload first
-                let base64Image = messageData.base64 || (messageData.content ? messageData.content.base64 : null);
-
-                // Fetch if missing
-                if (!base64Image && (messageData.id || messageData.key?.id)) {
-                    const messageId = messageData.id || messageData.key.id;
-                    console.log(`Fetching image media for message ID: ${messageId}`);
-                    try {
-                        base64Image = await this.downloadMedia(messageId);
-                    } catch (dlError) {
-                        console.error("Failed to download media via API:", dlError.message);
-                    }
+                    transcription = await MediaService.transcribeAudio(base64Audio, true);
+                } else if (audioUrl) {
+                    transcription = await MediaService.transcribeAudio(audioUrl, false);
                 }
 
-                // If we have base64, we need to pass a Data URI to OpenAI Vision
+                if (transcription) {
+                    const aiResponse = await AIAgentService.generateResponse(phone, transcription);
+                    await this.sendMessage(phone, aiResponse);
+                }
+            })().catch(err => console.error("[AUDIO_PROCESS_ERROR]:", err.message));
+        }
+
+        // Handle images
+        if (message.type === 'image' || message.mediaType === 'image') {
+            const base64Image = message.content?.base64 || message.base64;
+            (async () => {
                 if (base64Image) {
-                    console.log(`Received image (Base64) from ${phone}`);
-                    // NON-BLOCKING Execution
-                    (async () => {
-                        const dataUri = `data:image/jpeg;base64,${base64Image}`;
-                        const extractionData = await MediaService.extractDataFromImage(dataUri);
-                        const analysisInput = `[DADOS_DOCUMENTO]: ${JSON.stringify(extractionData)}`;
-                        const aiResponse = await AIAgentService.generateResponse(phone, analysisInput);
-                        this.sendMessage(phone, aiResponse);
-                    })().catch(err => console.error("[NON_BLOCKING_IMAGE] Error:", err.message));
+                    const dataUri = `data:image/jpeg;base64,${base64Image}`;
+                    const extractionData = await MediaService.extractDataFromImage(dataUri);
+                    const aiResponse = await AIAgentService.generateResponse(phone, `[DADOS_IMG]: ${JSON.stringify(extractionData)}`);
+                    await this.sendMessage(phone, aiResponse);
                 }
-                else {
-                    // Fallback to URL
-                    let imageUrl = null;
-                    if (messageData.content && messageData.content.URL) {
-                        imageUrl = messageData.content.URL;
-                    } else {
-                        imageUrl = messageData.mediaUrl || messageData.url || messageData.file;
-                    }
-
-                    if (imageUrl) {
-                        console.log(`Received image from ${phone}: ${imageUrl}`);
-                        try {
-                            // NON-BLOCKING Execution
-                            (async () => {
-                                const extractionData = await MediaService.extractDataFromImage(imageUrl);
-                                const analysisInput = `[DADOS_DOCUMENTO]: ${JSON.stringify(extractionData)}`;
-                                const aiResponse = await AIAgentService.generateResponse(phone, analysisInput);
-                                this.sendMessage(phone, aiResponse);
-                            })().catch(err => console.error("[NON_BLOCKING_IMAGE_URL] Error:", err.message));
-                        } catch (err) {
-                            console.error("Image Processing Failed:", err.message);
-                            await this.sendMessage(phone, "⚠️ Não consegui processar a imagem do documento.");
-                        }
-                    }
-                }
-            }
-        } catch (error) {
-            console.error("Error processing Uazapi webhook:", error);
+            })().catch(err => console.error("[IMAGE_PROCESS_ERROR]:", err.message));
         }
     }
-}
-
-
-// Helper for image response
-function jsonToFriendlyText(data) {
-    if (!data) return "Não consegui ler nada.";
-    return Object.entries(data)
-        .map(([key, val]) => `*${key}:* ${val}`)
-        .join('\n');
 }
 
 module.exports = new UazapiService();

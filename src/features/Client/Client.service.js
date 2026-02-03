@@ -18,14 +18,17 @@ class ClientService {
                 defaults: { status: 'novo' }
             });
 
-            // 2. Wrap the instance to update cache on every save/update
+            // 2. Define proxy with reference to itself for cache updates
+            const updateCache = (obj) => {
+                clientCache.set(whatsappNumber, { client: obj, timestamp: Date.now() });
+            };
+
             const proxy = new Proxy(client, {
                 get: (target, prop) => {
                     if (prop === 'update') {
                         return async (values) => {
                             const result = await target.update(values);
-                            // Update cache immediately on DB update
-                            clientCache.set(whatsappNumber, { client: target, timestamp: Date.now() });
+                            updateCache(proxy); // Update cache with the SAME proxy
                             return result;
                         };
                     }
@@ -33,8 +36,8 @@ class ClientService {
                 }
             });
 
-            // 3. Save to Cache
-            clientCache.set(whatsappNumber, { client: proxy, timestamp: Date.now() });
+            // 3. Initial Save to Cache
+            updateCache(proxy);
             return proxy;
         } catch (error) {
             console.error("Error in findOrCreateClient:", error);

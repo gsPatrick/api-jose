@@ -1,9 +1,16 @@
 const UazapiService = require('./Uazapi.service');
 
 exports.webhook = async (req, res) => {
-    // Return 200 immediately to acknowledge receipt
+    // 1. FAST FILTER: Only process "messages" EventType
+    // This ignores EventType: "chats", "messages_update" (Read receipts), etc.
+    if (!req.body || req.body.EventType !== 'messages') {
+        return res.status(200).send('Event Ignored');
+    }
+
+    // 2. Return 200 immediately to acknowledge receipt
     res.status(200).send('OK');
 
+    // 3. Process asynchronously
     try {
         await UazapiService.processWebhook(req.body);
     } catch (err) {

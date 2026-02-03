@@ -5,7 +5,11 @@ const config = require('../../../config/apis.config');
 // In-memory cache for INMET stations
 let stationsCache = null;
 let lastCacheUpdate = 0;
-const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours (Stations List)
+
+// In-memory cache for climate results (City + Period)
+const resultsCache = new Map();
+const RESULT_CACHE_TTL = 4 * 60 * 60 * 1000; // 4 hours
 
 /**
  * Calcula distância entre dois pontos (Haversine)
@@ -179,6 +183,14 @@ async function getInmetData(latitude, longitude, days = 7, customStartDate = nul
         endStr = format(endDate, 'yyyy-MM-dd');
     }
 
+    // --- RESULTS CACHE CHECK ---
+    const cacheKey = `${latitude},${longitude},${startStr},${endStr}`;
+    const cachedResult = resultsCache.get(cacheKey);
+    if (cachedResult && (Date.now() - cachedResult.timestamp < RESULT_CACHE_TTL)) {
+        console.log(`[CLIMATE_CACHE] Hit for: ${cacheKey}`);
+        return cachedResult.data;
+    }
+
     // 1. TENTATIVA INMET
     try {
         const station = await findNearestInmetStation(latitude, longitude);
@@ -190,7 +202,7 @@ async function getInmetData(latitude, longitude, days = 7, customStartDate = nul
             const processedData = processInmetData(response.data);
 
             if (processedData && processedData.length > 0) {
-                return {
+                const finalResult = {
                     station,
                     data: processedData,
                     metadata: {
@@ -199,6 +211,9 @@ async function getInmetData(latitude, longitude, days = 7, customStartDate = nul
                         dataPoints: response.data.length
                     }
                 };
+                // Save to cache
+                resultsCache.set(cacheKey, { data: finalResult, timestamp: Date.now() });
+                return finalResult;
             }
             console.warn(`INMET station ${station.code} returned no data. Falling back to NASA POWER.`);
         }

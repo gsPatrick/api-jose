@@ -317,8 +317,11 @@ class AIAgentService {
             // FALLBACK: RAG ROUTER (Simple Educational)
             console.log(`Routing to RAG Brain: ${input}`);
 
-            // 1. Check Cache first
-            const cachedResponse = RAGService.getFromCache(textInput);
+            // 1. Generate Query Embedding (Crucial for both Cache and Retrieval)
+            const embedding = await RAGService.generateEmbedding(textInput);
+
+            // 2. Persistent Semantic Hit check
+            const cachedResponse = await RAGService.getSemanticHit(embedding);
             if (cachedResponse) {
                 return cachedResponse;
             }
@@ -326,7 +329,7 @@ class AIAgentService {
             // FEEDBACK MSG (Only for non-cached real AI queries) - Non-blocking
             UazapiService.sendMessage(clientNumber, `⏳ Analisando sua dúvida no banco jurídico...`);
 
-            const embedding = await RAGService.generateEmbedding(textInput);
+            // 3. Document Retrieval
             const chunks = await RAGService.searchChunks(embedding);
             const contextText = chunks.map(c => `[Doc: ${c.source}]: ${c.text}`).join('\n\n');
 
@@ -354,8 +357,8 @@ class AIAgentService {
 
             const finalResponse = completion.choices[0].message.content;
 
-            // 2. Save to Cache
-            RAGService.saveToCache(textInput, finalResponse);
+            // 4. Save to Persistent Semantic Cache for future "learning"
+            RAGService.learnResponse(textInput, embedding, finalResponse).catch(() => { });
 
             return finalResponse;
 

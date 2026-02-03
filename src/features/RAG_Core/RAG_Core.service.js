@@ -5,40 +5,67 @@ const { QueryTypes } = require('sequelize');
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+const SemanticCache = require('../../models/SemanticCache');
+
 class RAGService {
     constructor() {
-        this.cache = new Map(); // Simple in-memory cache: { input_text: { response, timestamp } }
-        this.CACHE_TTL = 100 * 60 * 1000; // 60 minutes
+        this.SIMILARITY_THRESHOLD = 0.96; // Very high similarity for direct response reuse
     }
 
     /**
-     * Get response from cache if it exists and is fresh
+     * Busca uma resposta similar já gerada anteriormente no cache persistente.
+     * Retorna a resposta se a similaridade por vetor for maior que o threshold.
      */
-    getFromCache(text) {
-        const key = text.trim().toLowerCase();
-        const cached = this.cache.get(key);
-        if (cached && (Date.now() - cached.timestamp < this.CACHE_TTL)) {
-            console.log(`[RAG_CACHE] Cache hit for: "${key}"`);
-            return cached.response;
+    async getSemanticHit(queryEmbedding) {
+        try {
+            const vectorString = JSON.stringify(queryEmbedding);
+
+            // Busca o registro mais similar no Banco de Dados
+            const results = await sequelize.query(
+                `SELECT query_text, response_text, 1 - (embedding <=> :vector) as similarity
+                 FROM "SemanticCaches"
+                 WHERE (1 - (embedding <=> :vector)) > :threshold
+                 ORDER BY embedding <=> :vector
+                 LIMIT 1`,
+                {
+                    replacements: { vector: vectorString, threshold: this.SIMILARITY_THRESHOLD },
+                    type: QueryTypes.SELECT
+                }
+            );
+
+            if (results && results.length > 0) {
+                const hit = results[0];
+                console.log(`[PERSISTENT_CACHE] Semantic hit found! Similarity: ${hit.similarity.toFixed(4)}`);
+
+                // Opcional: Incrementar contador de hits de forma assíncrona
+                SemanticCache.increment('hits', { where: { query_text: hit.query_text } }).catch(() => { });
+
+                return hit.response_text;
+            }
+            return null;
+        } catch (error) {
+            console.error("[PERSISTENT_CACHE] Error during semantic lookup:", error.message);
+            return null;
         }
-        return null;
     }
 
     /**
-     * Save response to cache
+     * Salva uma nova resposta no cache persistente para aprendizado futuro.
      */
-    saveToCache(text, response) {
-        const key = text.trim().toLowerCase();
-        this.cache.set(key, {
-            response,
-            timestamp: Date.now()
-        });
-        console.log(`[RAG_CACHE] Cached response for: "${key}"`);
+    async learnResponse(queryText, embedding, responseText) {
+        try {
+            // Evitar duplicatas exatas ou muito próximas
+            const existing = await this.getSemanticHit(embedding);
+            if (existing) return;
 
-        // Basic cleanup: if cache too big, clear half
-        if (this.cache.size > 200) {
-            console.warn("[RAG_CACHE] Cache size limit reached. Clearing...");
-            this.cache.clear();
+            await SemanticCache.create({
+                query_text: queryText,
+                embedding: embedding,
+                response_text: responseText
+            });
+            console.log(`[PERSISTENT_CACHE] New response learned for: "${queryText}"`);
+        } catch (error) {
+            console.warn(`[PERSISTENT_CACHE] Failed to learn response: ${error.message}`);
         }
     }
     async generateEmbedding(text) {

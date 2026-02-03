@@ -185,7 +185,12 @@ class AIAgentService {
 
             // --- AI FALLBACK / GREETING ---
             if (!responseText) {
-                if (stage === 'START' || stage === 'START_CHOBOT' || lowerInput.length <= 3) {
+                if (stage === 'START' || stage === 'START_CHOBOT') {
+                    this.updateState(client, 'TRIAGEM8');
+                    return `Olá! 👋 Vi que você iniciou contato pelo nosso link/QR.\nEu sou o Mohsis, assistente informacional do escritório do Júnior Lopes.\n\n${STATE_TEXTS.TRIAGEM8}`;
+                }
+
+                if (lowerInput.length <= 3) {
                     this.updateState(client, 'MENU');
                     return STATE_TEXTS.MENU;
                 }

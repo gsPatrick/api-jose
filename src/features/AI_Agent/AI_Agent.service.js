@@ -28,7 +28,6 @@ const TERMS_TEXT = `🔒 *TERMOS DE CIÊNCIA E PRIVACIDADE*\n\n` +
     `Ao continuar, você autoriza o tratamento dos seus dados para triagem e agendamento.\n\n` +
     `Deseja aceitar e continuar?\n✅ [Aceitar e continuar] | ❌ [Não aceito]`;
 
-// Expanded greetings to be more fuzzy
 const GREETINGS = ['oi', 'olá', 'ola', 'ol', 'oie', 'oa', 'bom dia', 'boa tarde', 'boa noite', 'menu', 'inicio', 'início', 'reset', 'começar', 'ajuda', 'termos', 'voltar'];
 
 class AIAgentService {
@@ -49,11 +48,13 @@ class AIAgentService {
             const client = await ClientService.findOrCreateClient(clientNumber);
             const stage = client.conversation_stage || 'START';
 
-            // 1. FUZZY GREETING DETECTION (Catch common typos and short starts)
-            const isGreeting = GREETINGS.some(g => lowerInput === g || lowerInput.startsWith(g + ' ')) || (lowerInput.length <= 3 && /^[a-z]+$/.test(lowerInput));
+            // 1. FUZZY GREETING (Only if NOT in a waiting-input stage like CLIMATE_CITY)
+            const isWaitingInput = stage.startsWith('WAITING_CLIMATE') || stage === 'WAITING_LAWYER_CONTACT';
+            const isGreeting = GREETINGS.some(g => lowerInput === g || lowerInput.startsWith(g + ' ')) ||
+                (!isWaitingInput && lowerInput.length <= 3 && /^[a-z]+$/.test(lowerInput));
 
             if (isGreeting) {
-                console.log(`[ROUTING] Greeting detected for: ${lowerInput}`);
+                console.log(`[ROUTING] Greeting detected: ${lowerInput}`);
                 if (lowerInput === 'termos') {
                     this.updateState(client, 'WAITING_TERMS');
                     responseText = TERMS_TEXT;
@@ -66,7 +67,7 @@ class AIAgentService {
                 }
             }
 
-            // 2. NUMERIC MENUS (Strictly Deterministic)
+            // 2. NUMERIC MENUS
             if (!responseText && /^\d+$/.test(input) && input.length <= 2) {
                 console.log(`[ROUTING] Numeric logic in stage: ${stage}`);
                 switch (stage) {
@@ -84,7 +85,6 @@ class AIAgentService {
                     default:
                         if (input === '0') { this.updateState(client, 'MENU_SHOWN'); responseText = MENU_TEXT; }
                         else {
-                            // If user sends a number in a non-menu stage but it's small, show menu
                             responseText = MENU_TEXT;
                             this.updateState(client, 'MENU_SHOWN');
                         }
@@ -101,19 +101,21 @@ class AIAgentService {
 
             // 4. FLOWS (Climate/Lead)
             if (!responseText) {
-                if (stage === 'WAITING_CLIMATE_CITY' && input.length > 3) {
+                if (stage === 'WAITING_CLIMATE_CITY') {
                     const ClimateService = require('../External_Context/Climate/Climate.service');
+                    console.log(`[FLOW] Searching coordinates for city: ${input}`);
                     const coords = await ClimateService.getCoordinates(input);
-                    if (!coords) responseText = `❌ Município não encontrado. Tente novamente:`;
-                    else {
+                    if (!coords) {
+                        responseText = `❌ Município "${input}" não encontrado. Tente novamente ou digite "Menu" para voltar:`;
+                    } else {
                         const station = await ClimateService.findNearestInmetStation(coords.latitude, coords.longitude);
                         this.updateState(client, 'WAITING_CLIMATE_PERIOD', { farm_location: { ...coords, station } });
-                        responseText = `✅ Estação: ${station?.name || 'NASA'}\nInforme o período (ex: jan a mar 2024):`;
+                        responseText = `✅ Cidade: ${input}\n📍 Estação: ${station?.name || 'NASA'}\n\nInforme o período desejado (ex: jan a mar 2024):`;
                     }
                 }
             }
 
-            // 5. AI FALLBACK (Knowledge Base)
+            // 5. AI FALLBACK
             if (!responseText) {
                 const embedding = await RAGService.generateEmbedding(input);
                 const cached = await RAGService.getSemanticHit(embedding);
@@ -125,7 +127,7 @@ class AIAgentService {
                     const completion = await openai.chat.completions.create({
                         model: "gpt-4o-mini",
                         messages: [
-                            { role: "system", content: `Aja como o assistente Mohsis. Se o usuário estiver apenas saudando, você pode sugerir digitar 'Menu'. Caso contrário, use o contexto: ${context}` },
+                            { role: "system", content: `Aja como o assistente Mohsis. Se for apenas saudação, peça para digitar 'Menu'. Caso contrário, use: ${context}` },
                             { role: "user", content: input }
                         ]
                     });
@@ -134,13 +136,12 @@ class AIAgentService {
                 }
             }
 
-            // FINAL FORMATTING
             const duration = Date.now() - start;
             return `${responseText}\n\n_⚡ Processado em ${duration}ms_`;
 
         } catch (error) {
             console.error("[AGENT_ERROR]:", error);
-            return "Ocorreu um erro no processamento. Digite 'Menu' para voltar.";
+            return "Ocorreu um erro. Digite 'Menu' para reiniciar.";
         }
     }
 }

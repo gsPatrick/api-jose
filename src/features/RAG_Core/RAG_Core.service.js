@@ -6,6 +6,41 @@ const { QueryTypes } = require('sequelize');
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 class RAGService {
+    constructor() {
+        this.cache = new Map(); // Simple in-memory cache: { input_text: { response, timestamp } }
+        this.CACHE_TTL = 100 * 60 * 1000; // 60 minutes
+    }
+
+    /**
+     * Get response from cache if it exists and is fresh
+     */
+    getFromCache(text) {
+        const key = text.trim().toLowerCase();
+        const cached = this.cache.get(key);
+        if (cached && (Date.now() - cached.timestamp < this.CACHE_TTL)) {
+            console.log(`[RAG_CACHE] Cache hit for: "${key}"`);
+            return cached.response;
+        }
+        return null;
+    }
+
+    /**
+     * Save response to cache
+     */
+    saveToCache(text, response) {
+        const key = text.trim().toLowerCase();
+        this.cache.set(key, {
+            response,
+            timestamp: Date.now()
+        });
+        console.log(`[RAG_CACHE] Cached response for: "${key}"`);
+
+        // Basic cleanup: if cache too big, clear half
+        if (this.cache.size > 200) {
+            console.warn("[RAG_CACHE] Cache size limit reached. Clearing...");
+            this.cache.clear();
+        }
+    }
     async generateEmbedding(text) {
         try {
             const response = await openai.embeddings.create({

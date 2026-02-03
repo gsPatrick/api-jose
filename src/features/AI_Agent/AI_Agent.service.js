@@ -306,6 +306,12 @@ class AIAgentService {
             // FALLBACK: RAG ROUTER (Simple Educational)
             console.log(`Routing to RAG Brain: ${input}`);
 
+            // 1. Check Cache first
+            const cachedResponse = RAGService.getFromCache(textInput);
+            if (cachedResponse) {
+                return cachedResponse;
+            }
+
             // FEEDBACK MSG
             await UazapiService.sendMessage(clientNumber, `⏳ Analisando sua dúvida no banco jurídico...`);
 
@@ -335,7 +341,12 @@ class AIAgentService {
                 messages: [{ role: "system", content: systemPrompt }, { role: "user", content: textInput }],
             });
 
-            return completion.choices[0].message.content;
+            const finalResponse = completion.choices[0].message.content;
+
+            // 2. Save to Cache
+            RAGService.saveToCache(textInput, finalResponse);
+
+            return finalResponse;
 
         } catch (error) {
             console.error("Critical Error in AIAgentService:", error);

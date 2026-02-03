@@ -40,105 +40,107 @@ class AIAgentService {
         const input = textInput.trim();
         const lowerInput = input.toLowerCase();
 
-        let response = "";
-        let isFinal = false;
+        console.log(`[ROUTING] Incoming "${input}" for ${clientNumber}`);
+
+        let responseText = "";
+        let shouldCache = false; // Only cache complex AI responses
 
         try {
-            // 1. GREETINGS
+            // 1. GREETINGS (Highest Priority)
             if (GREETINGS.some(g => lowerInput === g || lowerInput.startsWith(g + ' '))) {
                 const client = await ClientService.findOrCreateClient(clientNumber);
                 if (lowerInput === 'termos') {
                     this.updateState(client, 'WAITING_TERMS');
-                    response = TERMS_TEXT;
+                    responseText = TERMS_TEXT;
                 } else if (!client.conversation_stage || client.conversation_stage === 'START') {
                     this.updateState(client, 'WAITING_TERMS');
-                    response = `🌾 Olá! Sou o Mohsis, assistente de informação do Dr. [Nome].\n\nAntes de continuar, você aceita nossos termos de uso?`;
+                    responseText = `🌾 Olá! Sou o Mohsis, assistente de informação do Dr. [Nome].\n\nAntes de continuar, você aceita nossos termos de uso?`;
                 } else {
                     this.updateState(client, 'MENU_SHOWN');
-                    response = MENU_TEXT;
+                    responseText = MENU_TEXT;
                 }
-                isFinal = true;
             }
 
-            // 2. NUMERIC MENUS
-            if (!isFinal && /^\d+$/.test(input) && input.length <= 2) {
+            // 2. NUMERIC MENUS (Strictly Deterministic)
+            if (!responseText && /^\d+$/.test(input) && input.length <= 2) {
                 const client = await ClientService.findOrCreateClient(clientNumber);
                 const stage = client.conversation_stage;
 
+                console.log(`[ROUTING] Numeric logic in stage: ${stage}`);
+
                 switch (stage) {
                     case 'MENU_SHOWN':
-                        if (input === '1') { this.updateState(client, 'WAITING_MONITORAMENTO_SUBOPTION'); response = MONITORAMENTO_MENU; }
-                        else if (input === '2') { response = `📈 *MERCADO*: Em breve.\n[0] Voltar`; }
-                        else if (input === '3') { response = `⚖️ *REGRAS*: Em breve.\n[0] Voltar`; }
-                        else if (input === '4') { this.updateState(client, 'WAITING_LAWYER_CONTACT'); response = "📅 *Agendar*: Envie Nome e Cidade."; }
-                        else if (input === '0') { response = MENU_TEXT; }
+                        if (input === '1') { this.updateState(client, 'WAITING_MONITORAMENTO_SUBOPTION'); responseText = MONITORAMENTO_MENU; }
+                        else if (input === '2') { responseText = `📈 *MERCADO*: Em breve.\n[0] Voltar`; }
+                        else if (input === '3') { responseText = `⚖️ *REGRAS*: Em breve.\n[0] Voltar`; }
+                        else if (input === '4') { this.updateState(client, 'WAITING_LAWYER_CONTACT'); responseText = "📅 *Agendar*: Envie Nome e Cidade."; }
+                        else if (input === '0') { responseText = MENU_TEXT; }
                         break;
                     case 'WAITING_MONITORAMENTO_SUBOPTION':
-                        if (input === '1') { this.updateState(client, 'WAITING_CLIMATE_CITY'); response = "🌦️ *CLIMA*\nInforme o município:"; }
-                        else if (input === '0') { this.updateState(client, 'MENU_SHOWN'); response = MENU_TEXT; }
-                        break;
-                    case 'WAITING_TERMS':
-                        if (input === '0') { this.updateState(client, 'START'); response = "Até mais! 🌾"; }
+                        if (input === '1') { this.updateState(client, 'WAITING_CLIMATE_CITY'); responseText = "🌦️ *CLIMA*\nInforme o município:"; }
+                        else if (input === '0') { this.updateState(client, 'MENU_SHOWN'); responseText = MENU_TEXT; }
                         break;
                     default:
-                        if (input === '0') { this.updateState(client, 'MENU_SHOWN'); response = MENU_TEXT; }
+                        if (input === '0') { this.updateState(client, 'MENU_SHOWN'); responseText = MENU_TEXT; }
                 }
-                if (response) isFinal = true;
             }
 
             // 3. TERMS ACCEPTANCE
-            if (!isFinal && (lowerInput.includes('aceito') || lowerInput.includes('continuar'))) {
+            if (!responseText && (lowerInput.includes('aceito') || lowerInput.includes('continuar'))) {
                 const client = await ClientService.findOrCreateClient(clientNumber);
                 if (client.conversation_stage === 'WAITING_TERMS') {
                     this.updateState(client, 'MENU_SHOWN');
-                    response = MENU_TEXT;
-                    isFinal = true;
+                    responseText = MENU_TEXT;
                 }
             }
 
-            // 4. CLIMATE FLOW
-            if (!isFinal) {
+            // 4. FLOWS (Climate/Lead)
+            if (!responseText) {
                 const client = await ClientService.findOrCreateClient(clientNumber);
-                if (client.conversation_stage === 'WAITING_CLIMATE_CITY') {
+                if (client.conversation_stage === 'WAITING_CLIMATE_CITY' && input.length > 3) {
                     const ClimateService = require('../External_Context/Climate/Climate.service');
                     const coords = await ClimateService.getCoordinates(input);
-                    if (!coords) response = `❌ Município não encontrado. Tente novamente:`;
+                    if (!coords) responseText = `❌ Município não encontrado. Tente novamente:`;
                     else {
                         const station = await ClimateService.findNearestInmetStation(coords.latitude, coords.longitude);
                         this.updateState(client, 'WAITING_CLIMATE_PERIOD', { farm_location: { ...coords, station } });
-                        response = `✅ Estação: ${station?.name || 'NASA'}\nInforme o período (ex: jan a mar 2024):`;
+                        responseText = `✅ Estação: ${station?.name || 'NASA'}\nInforme o período (ex: jan a mar 2024):`;
                     }
-                    isFinal = true;
                 }
             }
 
-            // 5. AI FALLBACK
-            if (!isFinal) {
+            // 5. AI FALLBACK (Knowledge Base)
+            if (!responseText) {
                 const embedding = await RAGService.generateEmbedding(input);
                 const cached = await RAGService.getSemanticHit(embedding);
-                if (cached) response = cached;
-                else {
+                if (cached) {
+                    responseText = cached;
+                } else {
                     const chunks = await RAGService.searchChunks(embedding);
                     const context = chunks.map(c => c.text).join('\n\n');
                     const completion = await openai.chat.completions.create({
                         model: "gpt-4o-mini",
                         messages: [
-                            { role: "system", content: `Aja como o assistente Mohsis. Contexto: ${context}` },
+                            { role: "system", content: `Aja como o assistente Mohsis. Use este contexto jurídico: ${context}` },
                             { role: "user", content: input }
                         ]
                     });
-                    response = completion.choices[0].message.content;
-                    RAGService.learnResponse(input, embedding, response).catch(() => { });
+                    responseText = completion.choices[0].message.content;
+                    shouldCache = true;
+                    // Learn response only for non-deterministic AI answers
+                    RAGService.learnResponse(input, embedding, responseText).catch(() => { });
                 }
             }
 
-            // ADD PERFORMANCE FOOTER
+            // FINAL FORMATTING
             const duration = Date.now() - start;
-            return `${response}\n\n_⚡ Processado em ${duration}ms_`;
+            const finalMsg = `${responseText}\n\n_⚡ Processado em ${duration}ms_`;
+
+            return finalMsg;
 
         } catch (error) {
             console.error("[AGENT_ERROR]:", error);
-            return "Ocorreu um erro. Digite 'Menu' para reiniciar.";
+            return "Ocorreu um erro no processamento. Digite 'Menu' para voltar.";
         }
     }
 }

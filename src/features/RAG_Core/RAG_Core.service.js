@@ -13,7 +13,7 @@ const SemanticCache = require('../../models/SemanticCache');
 
 class RAGService {
     constructor() {
-        this.SIMILARITY_THRESHOLD = 0.96; // Very high similarity for direct response reuse
+        this.SIMILARITY_THRESHOLD = 0.98; // Increased for higher precision
     }
 
     /**
@@ -58,6 +58,13 @@ class RAGService {
      */
     async learnResponse(queryText, embedding, responseText) {
         try {
+            // SAFEGUARDS: Do NOT cache if:
+            // 1. Query is very short (likely numeric/menu)
+            // 2. Query is numeric
+            // 3. Response is too short
+            if (queryText.length < 5 || /^\d+$/.test(queryText)) return;
+            if (responseText.length < 10) return;
+
             // Evitar duplicatas exatas ou muito próximas
             const existing = await this.getSemanticHit(embedding);
             if (existing) return;
@@ -67,7 +74,7 @@ class RAGService {
                 embedding: embedding,
                 response_text: responseText
             });
-            console.log(`[PERSISTENT_CACHE] New response learned for: "${queryText}"`);
+            console.log(`[PERSISTENT_CACHE] Learned insight for: "${queryText.substring(0, 30)}..."`);
         } catch (error) {
             console.warn(`[PERSISTENT_CACHE] Failed to learn response: ${error.message}`);
         }

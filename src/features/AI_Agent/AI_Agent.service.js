@@ -185,10 +185,15 @@ class AIAgentService {
             if (currentState === 'WAITING_CLIMATE_CITY') {
                 const ClimateService = require('../External_Context/Climate/Climate.service');
 
-                // FEEDBACK MSG: Map search can be slow
-                await UazapiService.sendMessage(clientNumber, `🔍 Buscando informações sobre "${textInput}"... Aguarde um momento.`);
+                // FEEDBACK MSG: Map search can be slow (Non-blocking)
+                UazapiService.sendMessage(clientNumber, `🔍 Buscando informações sobre "${textInput}"... Aguarde um momento.`);
 
-                // 1. Geocoding
+                // 1. Validate Input (Don't geocode simple numbers)
+                if (/^\d+$/.test(input) && input.length <= 2) {
+                    return `❌ *Município inválido.* Por favor, informe o nome da cidade por extenso (ex: Uberlândia MG).\n\nPara voltar, digite *0*.`;
+                }
+
+                // 2. Geocoding
                 const coords = await ClimateService.getCoordinates(textInput);
                 if (!coords) {
                     return `❌ Município não encontrado: "${textInput}"\n\nDicas:\n• Verifique a grafia\n• Informe também o estado: "Uberlândia MG"\n\nTente novamente:`;
@@ -281,8 +286,8 @@ class AIAgentService {
                 // Log logic
                 console.log(`[LEAD] New Scheduling Request: ${textInput}`);
 
-                // FEEDBACK MSG
-                await UazapiService.sendMessage(clientNumber, `⏳ Enviando solicitação...`);
+                // FEEDBACK MSG (Non-blocking)
+                UazapiService.sendMessage(clientNumber, `⏳ Enviando solicitação...`);
 
                 // --- INTEGRATION: BASEROW CRM ---
                 try {
@@ -318,8 +323,8 @@ class AIAgentService {
                 return cachedResponse;
             }
 
-            // FEEDBACK MSG (Only for non-cached real AI queries)
-            await UazapiService.sendMessage(clientNumber, `⏳ Analisando sua dúvida no banco jurídico...`);
+            // FEEDBACK MSG (Only for non-cached real AI queries) - Non-blocking
+            UazapiService.sendMessage(clientNumber, `⏳ Analisando sua dúvida no banco jurídico...`);
 
             const embedding = await RAGService.generateEmbedding(textInput);
             const chunks = await RAGService.searchChunks(embedding);

@@ -2,6 +2,11 @@ const axios = require('axios');
 const { format, subDays } = require('date-fns');
 const config = require('../../../config/apis.config');
 
+// In-memory cache for INMET stations
+let stationsCache = null;
+let lastCacheUpdate = 0;
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+
 /**
  * Calcula distância entre dois pontos (Haversine)
  */
@@ -27,12 +32,18 @@ function toRad(degrees) {
  */
 async function findNearestInmetStation(latitude, longitude) {
     try {
-        const response = await axios.get(
-            `${config.inmet.baseURL}/estacoes/T`,
-            { timeout: config.inmet.timeout }
-        );
+        // Use cache if available and fresh
+        if (!stationsCache || (Date.now() - lastCacheUpdate > CACHE_DURATION)) {
+            console.log("[CLIMATE] Refreshing INMET stations cache...");
+            const response = await axios.get(
+                `${config.inmet.baseURL}/estacoes/T`,
+                { timeout: config.inmet.timeout }
+            );
+            stationsCache = response.data;
+            lastCacheUpdate = Date.now();
+        }
 
-        const stations = response.data;
+        const stations = stationsCache;
         let nearestStation = null;
         let minDistance = Infinity;
 

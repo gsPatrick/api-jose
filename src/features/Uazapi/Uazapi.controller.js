@@ -1,21 +1,30 @@
 const UazapiService = require('./Uazapi.service');
 
 exports.webhook = async (req, res) => {
+    const arrivalTime = Date.now();
+
     // 1. FAST FILTER: Only process "messages" EventType
     if (!req.body || req.body.EventType !== 'messages') {
         return res.status(200).send('Event Ignored');
     }
 
-    // 2. CRITICAL: Ignore messages sent BY the bot (fromMe)
-    // This prevents infinite loops where the bot responds to its own messages.
+    // 2. TIMING DIAGNOSTICS: Compare WhatsApp timestamp with Arrival time
+    if (req.body.message && req.body.message.messageTimestamp) {
+        // WhatsApp timestamp is in seconds, convert to ms
+        const waTimestamp = req.body.message.messageTimestamp;
+        const networkDelay = arrivalTime - waTimestamp;
+        console.log(`[NETWORK_LATENCY] Webhook traveled for ${networkDelay}ms before reaching our server.`);
+    }
+
+    // 3. CRITICAL: Ignore messages sent BY the bot (fromMe)
     if (req.body.message && req.body.message.fromMe === true) {
         return res.status(200).send('Self-message Ignored');
     }
 
-    // 3. Return 200 immediately to acknowledge receipt
+    // 4. Return 200 immediately to acknowledge receipt
     res.status(200).send('OK');
 
-    // 4. Process asynchronously
+    // 5. Process asynchronously
     try {
         await UazapiService.processWebhook(req.body);
     } catch (err) {

@@ -112,6 +112,41 @@ class AIAgentService {
                         this.updateState(client, 'WAITING_CLIMATE_PERIOD', { farm_location: { ...coords, station } });
                         responseText = `✅ Cidade: ${input}\n📍 Estação: ${station?.name || 'NASA'}\n\nInforme o período desejado (ex: jan a mar 2024):`;
                     }
+                } else if (stage === 'WAITING_CLIMATE_PERIOD') {
+                    const ClimateService = require('../External_Context/Climate/Climate.service');
+
+                    // 1. Interpret dates with AI
+                    const dateCompletion = await openai.chat.completions.create({
+                        model: "gpt-4o-mini",
+                        messages: [
+                            { role: "system", content: "Extraia startDate e endDate (YYYY-MM-DD). Se for um período passado, use o ano mencionado ou 2024 por padrão. Retorne apenas JSON: { \"startDate\": \"...\", \"endDate\": \"...\" }" },
+                            { role: "user", content: input }
+                        ],
+                        response_format: { type: "json_object" }
+                    });
+
+                    try {
+                        const { startDate, endDate } = JSON.parse(dateCompletion.choices[0].message.content);
+                        const farmLoc = client.farm_location;
+
+                        // 2. Fetch data (passing 30 as dummy days since custom dates are provided)
+                        const climateData = await ClimateService.getInmetData(farmLoc.latitude, farmLoc.longitude, 30, startDate, endDate);
+
+                        // 3. Summarize with AI
+                        const summaryCompletion = await openai.chat.completions.create({
+                            model: "gpt-4o-mini",
+                            messages: [
+                                { role: "system", content: "Aja como Mohsis, assistente agrícola. Resuma estes dados climáticos para o produtor rural. Foque nos totais de chuva e temperaturas médias/máximas de forma amigável." },
+                                { role: "user", content: `Dados para o período ${input} em ${farmLoc.name || 'sua região'}:\n${JSON.stringify(climateData)}` }
+                            ]
+                        });
+
+                        responseText = summaryCompletion.choices[0].message.content;
+                        this.updateState(client, 'MENU_SHOWN');
+                    } catch (err) {
+                        console.error("Error in climate period flow:", err);
+                        responseText = "❌ Não consegui processar essa data ou obter dados para este período. Tente outro formato (ex: jan a mar 2024):";
+                    }
                 }
             }
 
@@ -136,8 +171,7 @@ class AIAgentService {
                 }
             }
 
-            const duration = Date.now() - start;
-            return `${responseText}\n\n_⚡ Processado em ${duration}ms_`;
+            return responseText;
 
         } catch (error) {
             console.error("[AGENT_ERROR]:", error);

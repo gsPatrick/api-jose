@@ -157,9 +157,9 @@ function processInmetData(rawData) {
  * Obtém dados climáticos (Tenta INMET, se falhar ou vazio, tenta NASA)
  */
 async function getInmetData(latitude, longitude, days = 7, customStartDate = null, customEndDate = null) {
-    // Validações
-    if (days < 1 || days > 90) {
-        throw new Error('Parâmetro "days" deve estar entre 1 e 90');
+    // Validações (Only if not using custom dates)
+    if (!customStartDate && (days < 1 || days > 180)) {
+        throw new Error('Parâmetro "days" deve estar entre 1 e 180');
     }
 
     // Calcular período

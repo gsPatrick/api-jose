@@ -28,7 +28,8 @@ const TERMS_TEXT = `🔒 *TERMOS DE CIÊNCIA E PRIVACIDADE*\n\n` +
     `Ao continuar, você autoriza o tratamento dos seus dados para triagem e agendamento.\n\n` +
     `Deseja aceitar e continuar?\n✅ [Aceitar e continuar] | ❌ [Não aceito]`;
 
-const GREETINGS = ['oi', 'olá', 'ola', 'menu', 'inicio', 'início', 'reset', 'começar', 'bom dia', 'boa tarde', 'boa noite', 'ajuda', 'termos'];
+// Expanded greetings to be more fuzzy
+const GREETINGS = ['oi', 'olá', 'ola', 'ol', 'oie', 'oa', 'bom dia', 'boa tarde', 'boa noite', 'menu', 'inicio', 'início', 'reset', 'começar', 'ajuda', 'termos', 'voltar'];
 
 class AIAgentService {
     updateState(client, stage, extraData = {}) {
@@ -43,16 +44,20 @@ class AIAgentService {
         console.log(`[ROUTING] Incoming "${input}" for ${clientNumber}`);
 
         let responseText = "";
-        let shouldCache = false; // Only cache complex AI responses
 
         try {
-            // 1. GREETINGS (Highest Priority)
-            if (GREETINGS.some(g => lowerInput === g || lowerInput.startsWith(g + ' '))) {
-                const client = await ClientService.findOrCreateClient(clientNumber);
+            const client = await ClientService.findOrCreateClient(clientNumber);
+            const stage = client.conversation_stage || 'START';
+
+            // 1. FUZZY GREETING DETECTION (Catch common typos and short starts)
+            const isGreeting = GREETINGS.some(g => lowerInput === g || lowerInput.startsWith(g + ' ')) || (lowerInput.length <= 3 && /^[a-z]+$/.test(lowerInput));
+
+            if (isGreeting) {
+                console.log(`[ROUTING] Greeting detected for: ${lowerInput}`);
                 if (lowerInput === 'termos') {
                     this.updateState(client, 'WAITING_TERMS');
                     responseText = TERMS_TEXT;
-                } else if (!client.conversation_stage || client.conversation_stage === 'START') {
+                } else if (stage === 'START' || stage === 'START_CHOBOT') {
                     this.updateState(client, 'WAITING_TERMS');
                     responseText = `🌾 Olá! Sou o Mohsis, assistente de informação do Dr. [Nome].\n\nAntes de continuar, você aceita nossos termos de uso?`;
                 } else {
@@ -63,11 +68,7 @@ class AIAgentService {
 
             // 2. NUMERIC MENUS (Strictly Deterministic)
             if (!responseText && /^\d+$/.test(input) && input.length <= 2) {
-                const client = await ClientService.findOrCreateClient(clientNumber);
-                const stage = client.conversation_stage;
-
                 console.log(`[ROUTING] Numeric logic in stage: ${stage}`);
-
                 switch (stage) {
                     case 'MENU_SHOWN':
                         if (input === '1') { this.updateState(client, 'WAITING_MONITORAMENTO_SUBOPTION'); responseText = MONITORAMENTO_MENU; }
@@ -82,13 +83,17 @@ class AIAgentService {
                         break;
                     default:
                         if (input === '0') { this.updateState(client, 'MENU_SHOWN'); responseText = MENU_TEXT; }
+                        else {
+                            // If user sends a number in a non-menu stage but it's small, show menu
+                            responseText = MENU_TEXT;
+                            this.updateState(client, 'MENU_SHOWN');
+                        }
                 }
             }
 
             // 3. TERMS ACCEPTANCE
-            if (!responseText && (lowerInput.includes('aceito') || lowerInput.includes('continuar'))) {
-                const client = await ClientService.findOrCreateClient(clientNumber);
-                if (client.conversation_stage === 'WAITING_TERMS') {
+            if (!responseText && (lowerInput.includes('aceito') || lowerInput.includes('continuar') || lowerInput === 'sim' || lowerInput === 'ok')) {
+                if (stage === 'WAITING_TERMS') {
                     this.updateState(client, 'MENU_SHOWN');
                     responseText = MENU_TEXT;
                 }
@@ -96,8 +101,7 @@ class AIAgentService {
 
             // 4. FLOWS (Climate/Lead)
             if (!responseText) {
-                const client = await ClientService.findOrCreateClient(clientNumber);
-                if (client.conversation_stage === 'WAITING_CLIMATE_CITY' && input.length > 3) {
+                if (stage === 'WAITING_CLIMATE_CITY' && input.length > 3) {
                     const ClimateService = require('../External_Context/Climate/Climate.service');
                     const coords = await ClimateService.getCoordinates(input);
                     if (!coords) responseText = `❌ Município não encontrado. Tente novamente:`;
@@ -121,22 +125,18 @@ class AIAgentService {
                     const completion = await openai.chat.completions.create({
                         model: "gpt-4o-mini",
                         messages: [
-                            { role: "system", content: `Aja como o assistente Mohsis. Use este contexto jurídico: ${context}` },
+                            { role: "system", content: `Aja como o assistente Mohsis. Se o usuário estiver apenas saudando, você pode sugerir digitar 'Menu'. Caso contrário, use o contexto: ${context}` },
                             { role: "user", content: input }
                         ]
                     });
                     responseText = completion.choices[0].message.content;
-                    shouldCache = true;
-                    // Learn response only for non-deterministic AI answers
                     RAGService.learnResponse(input, embedding, responseText).catch(() => { });
                 }
             }
 
             // FINAL FORMATTING
             const duration = Date.now() - start;
-            const finalMsg = `${responseText}\n\n_⚡ Processado em ${duration}ms_`;
-
-            return finalMsg;
+            return `${responseText}\n\n_⚡ Processado em ${duration}ms_`;
 
         } catch (error) {
             console.error("[AGENT_ERROR]:", error);

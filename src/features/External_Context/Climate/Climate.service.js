@@ -28,19 +28,36 @@ function toRad(degrees) {
 }
 
 /**
+ * Pre-load stations cache on startup (Public)
+ */
+async function preloadStations(retries = 3) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            console.log(`[CLIMATE] Pre-loading INMET stations cache (Attempt ${i + 1}/${retries})...`);
+            const response = await axios.get(
+                `${config.inmet.baseURL}/estacoes/T`,
+                { timeout: 30000 } // Higher timeout for pre-load
+            );
+            stationsCache = response.data;
+            lastCacheUpdate = Date.now();
+            console.log(`[CLIMATE] Stations cache pre-loaded successfully (${stationsCache.length} stations).`);
+            return;
+        } catch (err) {
+            console.warn(`[CLIMATE] Pre-load attempt ${i + 1} failed: ${err.message}`);
+            if (i === retries - 1) throw err;
+            await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+    }
+}
+
+/**
  * Busca estação INMET mais próxima
  */
 async function findNearestInmetStation(latitude, longitude) {
     try {
         // Use cache if available and fresh
         if (!stationsCache || (Date.now() - lastCacheUpdate > CACHE_DURATION)) {
-            console.log("[CLIMATE] Refreshing INMET stations cache...");
-            const response = await axios.get(
-                `${config.inmet.baseURL}/estacoes/T`,
-                { timeout: config.inmet.timeout }
-            );
-            stationsCache = response.data;
-            lastCacheUpdate = Date.now();
+            await preloadStations();
         }
 
         const stations = stationsCache;
@@ -333,5 +350,6 @@ module.exports = {
     getInmetData,
     getNasaPowerData,
     findNearestInmetStation,
-    getCoordinates
+    getCoordinates,
+    preloadStations
 };

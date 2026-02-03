@@ -30,6 +30,10 @@ const PORT = process.env.PORT || 3000;
 const startServer = async () => {
     await connectDB();
 
+    // Pre-load external caches (Climate stations etc)
+    const ClimateService = require('./src/features/External_Context/Climate/Climate.service');
+    ClimateService.preloadStations().catch(err => console.error("Failed to pre-load stations:", err.message));
+
     // Sync models
     // In production, use migrations instead of sync()
     // Using alter: true to update tables if they exist

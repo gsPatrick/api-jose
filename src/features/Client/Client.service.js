@@ -18,9 +18,24 @@ class ClientService {
                 defaults: { status: 'novo' }
             });
 
-            // 2. Save to Cache
-            clientCache.set(whatsappNumber, { client, timestamp: Date.now() });
-            return client;
+            // 2. Wrap the instance to update cache on every save/update
+            const proxy = new Proxy(client, {
+                get: (target, prop) => {
+                    if (prop === 'update') {
+                        return async (values) => {
+                            const result = await target.update(values);
+                            // Update cache immediately on DB update
+                            clientCache.set(whatsappNumber, { client: target, timestamp: Date.now() });
+                            return result;
+                        };
+                    }
+                    return target[prop];
+                }
+            });
+
+            // 3. Save to Cache
+            clientCache.set(whatsappNumber, { client: proxy, timestamp: Date.now() });
+            return proxy;
         } catch (error) {
             console.error("Error in findOrCreateClient:", error);
             throw error;
@@ -29,11 +44,9 @@ class ClientService {
 
     async updateClientStatus(whatsappNumber, status) {
         try {
-            await Client.update(
-                { status: status },
-                { where: { whatsapp_number: whatsappNumber } }
-            );
-            return await Client.findOne({ where: { whatsapp_number: whatsappNumber } });
+            const client = await this.findOrCreateClient(whatsappNumber);
+            await client.update({ status: status });
+            return client;
         } catch (error) {
             console.error("Error updating client status:", error);
             throw error;

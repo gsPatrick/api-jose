@@ -1,7 +1,6 @@
 const OpenAI = require('openai');
 const RAGService = require('../RAG_Core/RAG_Core.service');
 const BaserowService = require('../External_Context/Baserow/Baserow.service');
-const UazapiService = require('../Uazapi/Uazapi.service');
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -10,6 +9,7 @@ const Client = require('../../models/Client'); // Direct model access for update
 
 class AIAgentService {
     async generateResponse(clientNumber, textInput) {
+        const UazapiService = require('../Uazapi/Uazapi.service');
         try {
             console.log(`Processing message for ${clientNumber}: ${textInput}`);
 

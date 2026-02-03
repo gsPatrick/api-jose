@@ -1,5 +1,4 @@
 const axios = require('axios');
-const AIAgentService = require('../AI_Agent/AI_Agent.service');
 const MediaService = require('../Media_Processor/Media_Processor.service');
 const ClientService = require('../Client/Client.service');
 
@@ -122,6 +121,7 @@ class UazapiService {
      * We will log the payload to help with debugging.
      */
     async processWebhook(payload) {
+        const AIAgentService = require('../AI_Agent/AI_Agent.service');
         try {
             console.log("Uazapi Webhook Payload Received:", JSON.stringify(payload, null, 2));
 

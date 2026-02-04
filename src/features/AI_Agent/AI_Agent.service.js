@@ -25,7 +25,14 @@ class AIAgentService {
             const client = await ClientService.findOrCreateClient(clientNumber);
             const stage = client.conversation_stage || 'START';
 
-            // 1. GLOBAL COMMANDS (Intersects everything)
+            // 1. INITIAL TRIAGE (START Phase Priority)
+            // No matter what the input is, if it's the first message, force Triage.
+            if (stage === 'START' || stage === 'START_CHOBOT') {
+                this.updateState(client, 'TRIAGEM8');
+                return `${STATE_TEXTS.MENU_INTRO}\n\n${STATE_TEXTS.TRIAGEM8}`;
+            }
+
+            // 2. GLOBAL COMMANDS (Intersects everything after first contact)
             const isMenuGreeting = ['m', 'menu', 'inicio', 'início', 'ola', 'olá', 'oi', 'oie'].includes(lowerInput);
             if (isMenuGreeting) {
                 this.updateState(client, 'MENU');
@@ -52,7 +59,7 @@ class AIAgentService {
                 return STATE_TEXTS.APAGAR;
             }
 
-            // 2. STATE MACHINE LOGIC
+            // 3. STATE MACHINE LOGIC
             let responseText = "";
 
             // --- MENU NAVIGATION ---
@@ -170,7 +177,7 @@ class AIAgentService {
                             model: "gpt-4o-mini",
                             messages: [
                                 { role: "system", content: "Resuma dados climáticos para um produtor rural de forma concisa e amigável." },
-                                { role: "user", content: `Dados para ${input} em ${farmLoc.displayName}:\n${JSON.stringify(climateData)}` }
+                                { role: "user", content: `Dados para ${input} in ${farmLoc.displayName}:\n${JSON.stringify(climateData)}` }
                             ]
                         });
                         responseText = summary.choices[0].message.content;
@@ -183,11 +190,6 @@ class AIAgentService {
 
             // --- AI FALLBACK / GREETING ---
             if (!responseText) {
-                if (stage === 'START' || stage === 'START_CHOBOT') {
-                    this.updateState(client, 'TRIAGEM8');
-                    return `${STATE_TEXTS.MENU_INTRO}\n\n${STATE_TEXTS.TRIAGEM8}`;
-                }
-
                 if (lowerInput.length <= 3) {
                     this.updateState(client, 'MENU');
                     return STATE_TEXTS.MENU;

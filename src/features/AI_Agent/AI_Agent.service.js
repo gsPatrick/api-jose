@@ -2,8 +2,9 @@ const OpenAI = require('openai');
 const RAGService = require('../RAG_Core/RAG_Core.service');
 const BaserowService = require('../External_Context/Baserow/Baserow.service');
 const ClientService = require('../Client/Client.service');
-const ClimateService = require('../External_Context/Climate/Climate.service'); // Moved to top
+const ClimateService = require('../External_Context/Climate/Climate.service');
 const { STATE_TEXTS, POLICY_TEXT } = require('./AIAgentStates');
+const logger = require('../../utils/logger'); // Use shared winston logger
 
 const { httpsAgent } = require('../../config/axios.config');
 const openai = new OpenAI({
@@ -13,8 +14,10 @@ const openai = new OpenAI({
 
 class AIAgentService {
     updateState(client, stage, extraData = {}) {
-        // Non-blocking update
-        client.update({ conversation_stage: stage, ...extraData }).catch(err => console.error("[DB_UPDATE_ERROR]:", err.message));
+        const start = Date.now();
+        client.update({ conversation_stage: stage, ...extraData })
+            .then(() => logger.info(`[DB_UPDATE] Stage ${stage} saved in ${Date.now() - start}ms`))
+            .catch(err => logger.error(`[DB_UPDATE_ERROR] ${err.message}`));
     }
 
     async generateResponse(clientNumber, textInput) {
@@ -22,12 +25,15 @@ class AIAgentService {
         const input = textInput.trim();
         const lowerInput = input.toLowerCase();
 
+        logger.info(`[GEN_START] Client: ${clientNumber} | Input: "${input}"`);
+
         try {
+            const dbStart = Date.now();
             const client = await ClientService.findOrCreateClient(clientNumber);
+            logger.info(`[DB_CLIENT_LOADED] ${clientNumber} in ${Date.now() - dbStart}ms`);
+
             const stage = client.conversation_stage || 'START';
             const isTriageStage = stage.startsWith('TRIAGEM');
-
-            console.log(`[ROUTING] Client: ${clientNumber} | Stage: ${stage} | Input: "${input}"`);
 
             // 0. HIGH PRIORITY COMMANDS (Exit/Delete)
             if (lowerInput === 'sair' || lowerInput === 'encerrar') {
@@ -47,7 +53,6 @@ class AIAgentService {
 
             // 2. TRIAGE PERSISTENCE (Block greetings from resetting until done)
             if (isTriageStage && stage !== 'TRIAGEMRESULTADO') {
-                // Determine if input is valid for the current triage step
                 if (stage === 'TRIAGEM8') {
                     if (/^[a-d1-4]$/i.test(input)) {
                         let choice = input.toUpperCase();
@@ -66,14 +71,13 @@ class AIAgentService {
                     return STATE_TEXTS.TRIAGEMRESULTADO;
                 }
 
-                // If it's a greeting during triage, DO NOT reset to Menu. Just remind them.
                 const isGreeting = /^(oi|ola|olá|oie|bom dia|boa tarde|boa noite)/i.test(lowerInput);
                 if (isGreeting) {
                     return stage === 'TRIAGEM8' ? STATE_TEXTS.TRIAGEM8 : (stage === 'TRIAGEMQ2' ? STATE_TEXTS.TRIAGEMQ2 : STATE_TEXTS.TRIAGEMQ3);
                 }
             }
 
-            // 3. GLOBAL COMMANDS (Only available after triage or via explicit shortcut)
+            // 3. GLOBAL COMMANDS (Determinism)
             const isMenuCmd = /^(m|menu|inicio|início|bom dia|boa tarde|boa noite|oi|ola|olá|oie)/i.test(lowerInput);
             if (isMenuCmd) {
                 this.updateState(client, 'MENU');
@@ -96,7 +100,6 @@ class AIAgentService {
             let responseText = "";
             const isNumeric = /^\d+$/.test(input) && input.length <= 2;
 
-            // --- MENU NAVIGATION ---
             if (isNumeric) {
                 switch (stage) {
                     case 'MENU':
@@ -138,6 +141,10 @@ class AIAgentService {
                         else if (input === '4') { this.updateState(client, 'M4PENDENCIA'); responseText = STATE_TEXTS.M4PENDENCIA; }
                         else if (input === '5') { this.updateState(client, 'M4_ZARC'); responseText = STATE_TEXTS.M4_ZARC; }
                         break;
+                    default:
+                        // No match found for numeric in this state
+                        this.updateState(client, 'MENU');
+                        responseText = STATE_TEXTS.MENU;
                 }
             }
 
@@ -148,8 +155,11 @@ class AIAgentService {
                     BaserowService.saveLead({ phone: clientNumber, note: input, stage: 'HANDOFF' }).catch(() => { });
                     responseText = STATE_TEXTS.HANDOFFCONFIRM;
                 }
-                else if (stage === 'WAITING_CLIMATE_CITY' && !isNumeric) { // Safeguard: Ignores numeric inputs for city search
+                else if (stage === 'WAITING_CLIMATE_CITY' && !isNumeric) {
+                    const coordsStart = Date.now();
                     const coords = await ClimateService.getCoordinates(input);
+                    logger.info(`[GEOCODING] Done in ${Date.now() - coordsStart}ms`);
+
                     if (!coords) {
                         responseText = `❌ Município "${input}" não encontrado. Tente novamente ou mande M:`;
                     } else {
@@ -162,16 +172,17 @@ class AIAgentService {
 
             // --- AI FALLBACK ---
             if (!responseText) {
-                // If it's a numeric that didn't match a state, default to Menu instead of RAG to avoid 5s+ delay
                 if (isNumeric || lowerInput.length <= 3) {
                     this.updateState(client, 'MENU');
                     return STATE_TEXTS.MENU;
                 }
 
+                const aiStart = Date.now();
                 const embedding = await RAGService.generateEmbedding(input);
                 const cached = await RAGService.getSemanticHit(embedding);
                 if (cached) {
                     responseText = cached;
+                    logger.info(`[AI_CACHE_HIT] in ${Date.now() - aiStart}ms`);
                 } else {
                     const chunks = await RAGService.searchChunks(embedding);
                     const context = chunks.map(c => c.text).join('\n\n');
@@ -184,11 +195,12 @@ class AIAgentService {
                     });
                     responseText = completion.choices[0].message.content;
                     RAGService.learnResponse(input, embedding, responseText).catch(() => { });
+                    logger.info(`[AI_GENERATION] Done in ${Date.now() - aiStart}ms`);
                 }
             }
 
             const totalTime = Date.now() - startTime;
-            console.log(`[PERF] ${clientNumber} generated in ${totalTime}ms | Stage: ${stage} | Input: "${input}"`);
+            logger.info(`[GEN_COMPLETED] ${clientNumber} in ${totalTime}ms | Stage: ${stage}`);
             return responseText;
 
         } catch (error) {

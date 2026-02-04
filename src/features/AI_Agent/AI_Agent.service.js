@@ -19,22 +19,25 @@ class AIAgentService {
         const input = textInput.trim();
         const lowerInput = input.toLowerCase();
 
-        console.log(`[ROUTING] Incoming "${input}" for ${clientNumber}`);
-
         try {
             const client = await ClientService.findOrCreateClient(clientNumber);
             const stage = client.conversation_stage || 'START';
 
+            console.log(`[ROUTING] Client: ${clientNumber} | Stage: ${stage} | Input: "${input}"`);
+
+            // 0. GREETING/RESET DETECTION (Regex based)
+            const isGreeting = /^(oi|ola|olá|oie|m|menu|inicio|início|bom dia|boa tarde|boa noite|começar|comecar)/i.test(lowerInput);
+
             // 1. INITIAL TRIAGE (START Phase Priority)
-            // No matter what the input is, if it's the first message, force Triage.
+            // No matter what the input is, if it's the very first message ever, or a forced restart, force Triage.
             if (stage === 'START' || stage === 'START_CHOBOT') {
                 this.updateState(client, 'TRIAGEM8');
                 return `${STATE_TEXTS.MENU_INTRO}\n\n${STATE_TEXTS.TRIAGEM8}`;
             }
 
             // 2. GLOBAL COMMANDS (Intersects everything after first contact)
-            const isMenuGreeting = ['m', 'menu', 'inicio', 'início', 'ola', 'olá', 'oi', 'oie'].includes(lowerInput);
-            if (isMenuGreeting) {
+            if (isGreeting) {
+                // If they greet again, show the Menu (unless they are at START, handled above)
                 this.updateState(client, 'MENU');
                 return STATE_TEXTS.MENU;
             }
@@ -190,6 +193,7 @@ class AIAgentService {
 
             // --- AI FALLBACK / GREETING ---
             if (!responseText) {
+                // Short inputs that look like greetings but failed regex should still trigger Menu
                 if (lowerInput.length <= 3) {
                     this.updateState(client, 'MENU');
                     return STATE_TEXTS.MENU;
@@ -205,7 +209,7 @@ class AIAgentService {
                     const completion = await openai.chat.completions.create({
                         model: "gpt-4o-mini",
                         messages: [
-                            { role: "system", content: `${POLICY_TEXT}\n\nAja como o assistente Mohsis. Contexto agrícola:\n${context}` },
+                            { role: "system", content: `${POLICY_TEXT}\n\nAja como o assistente Mohsis. Você é um assistente informacional agrícola. Se o usuário estiver apenas cumprimentando, responda de forma breve, apresente-se como Mohsis e DIRECOINE para o menu principal enviando a lista de opções ou sugerindo digitar M. NUNCA responda apenas "Como posso ajudar hoje?" sem mencionar Mohsis ou o menu.\nContexto agrícola:\n${context}` },
                             { role: "user", content: input }
                         ]
                     });

@@ -2,6 +2,7 @@ const OpenAI = require('openai');
 const RAGService = require('../RAG_Core/RAG_Core.service');
 const BaserowService = require('../External_Context/Baserow/Baserow.service');
 const ClientService = require('../Client/Client.service');
+const ClimateService = require('../External_Context/Climate/Climate.service'); // Moved to top
 const { STATE_TEXTS, POLICY_TEXT } = require('./AIAgentStates');
 
 const { httpsAgent } = require('../../config/axios.config');
@@ -12,7 +13,8 @@ const openai = new OpenAI({
 
 class AIAgentService {
     updateState(client, stage, extraData = {}) {
-        client.update({ conversation_stage: stage, ...extraData }).catch(() => { });
+        // Non-blocking update
+        client.update({ conversation_stage: stage, ...extraData }).catch(err => console.error("[DB_UPDATE_ERROR]:", err.message));
     }
 
     async generateResponse(clientNumber, textInput) {
@@ -90,11 +92,12 @@ class AIAgentService {
                 return STATE_TEXTS.DOCS9;
             }
 
-            // 4. STATE MACHINE LOGIC
+            // 4. STATE MACHINE LOGIC (DETERMINISTIC)
             let responseText = "";
+            const isNumeric = /^\d+$/.test(input) && input.length <= 2;
 
             // --- MENU NAVIGATION ---
-            if (/^\d+$/.test(input) && input.length <= 2) {
+            if (isNumeric) {
                 switch (stage) {
                     case 'MENU':
                     case 'TRIAGEMRESULTADO':
@@ -145,8 +148,7 @@ class AIAgentService {
                     BaserowService.saveLead({ phone: clientNumber, note: input, stage: 'HANDOFF' }).catch(() => { });
                     responseText = STATE_TEXTS.HANDOFFCONFIRM;
                 }
-                else if (stage === 'WAITING_CLIMATE_CITY') {
-                    const ClimateService = require('../External_Context/Climate/Climate.service');
+                else if (stage === 'WAITING_CLIMATE_CITY' && !isNumeric) { // Safeguard: Ignores numeric inputs for city search
                     const coords = await ClimateService.getCoordinates(input);
                     if (!coords) {
                         responseText = `❌ Município "${input}" não encontrado. Tente novamente ou mande M:`;
@@ -160,7 +162,8 @@ class AIAgentService {
 
             // --- AI FALLBACK ---
             if (!responseText) {
-                if (lowerInput.length <= 3) {
+                // If it's a numeric that didn't match a state, default to Menu instead of RAG to avoid 5s+ delay
+                if (isNumeric || lowerInput.length <= 3) {
                     this.updateState(client, 'MENU');
                     return STATE_TEXTS.MENU;
                 }
@@ -185,7 +188,7 @@ class AIAgentService {
             }
 
             const totalTime = Date.now() - startTime;
-            console.log(`[PERF] ${clientNumber} processed in ${totalTime}ms`);
+            console.log(`[PERF] ${clientNumber} generated in ${totalTime}ms | Stage: ${stage} | Input: "${input}"`);
             return responseText;
 
         } catch (error) {

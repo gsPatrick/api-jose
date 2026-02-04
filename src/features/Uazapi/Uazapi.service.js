@@ -24,7 +24,8 @@ class UazapiService {
                     'token': this.token,
                     'apikey': this.token,
                     'Content-Type': 'application/json'
-                }
+                },
+                timeout: 10000 // 10s timeout for WhatsApp provider
             });
             const duration = Date.now() - start;
 

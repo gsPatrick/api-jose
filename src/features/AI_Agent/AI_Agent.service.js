@@ -63,6 +63,12 @@ class AIAgentService {
                 this.updateState(client, 'HANDOFF0');
                 return STATE_TEXTS.HANDOFF0;
             }
+            // GREETINGS -> RESET TO START (User Expectation)
+            const isGreeting = /^(OI|OLA|OLÁ|OIE|BOM DIA|BOA TARDE|BOA NOITE)/.test(upperInput);
+            if (isGreeting) {
+                this.updateState(client, 'START');
+                return STATE_TEXTS.START;
+            }
             if (upperInput === '8' || upperInput === 'TRIAGEM') {
                 this.updateState(client, 'TRIAGEM8');
                 return STATE_TEXTS.TRIAGEM8;

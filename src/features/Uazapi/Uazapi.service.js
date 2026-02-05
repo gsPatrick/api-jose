@@ -57,12 +57,16 @@ class UazapiService {
             }
         }
 
-        // Handle media (Audio)
-        if (message.type === 'audio' || message.mediaType === 'audio') {
+        // Handle media (Audio / PTT)
+        const isAudio = message.type === 'audio' || message.mediaType === 'audio' || message.type === 'ptt';
+        if (isAudio) {
             const base64Audio = message.content?.base64 || message.base64;
             const audioUrl = message.content?.url || message.url;
 
             (async () => {
+                // Send feedback immediately
+                await this.sendMessage(phone, "🎧 Ouvindo seu áudio...");
+
                 let transcription = "";
                 if (base64Audio) {
                     transcription = await MediaService.transcribeAudio(base64Audio, true);
@@ -73,6 +77,8 @@ class UazapiService {
                 if (transcription) {
                     const aiResponse = await AIAgentService.generateResponse(phone, transcription);
                     await this.sendMessage(phone, aiResponse);
+                } else {
+                    await this.sendMessage(phone, "Não consegui entender o áudio. Pode escrever?");
                 }
             })().catch(err => console.error("[AUDIO_PROCESS_ERROR]:", err.message));
         }

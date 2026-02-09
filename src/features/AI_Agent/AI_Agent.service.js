@@ -13,212 +13,246 @@ const openai = new OpenAI({
 });
 
 class AIAgentService {
-    // Helper: Update state and save last_state for "V" command
-    updateState(client, newState, extraData = {}) {
+    // ---------------------------------------------------------
+    // 1. STATE STACK LOGIC (Memory for "Back" button)
+    // ---------------------------------------------------------
+
+    async pushState(client, newState) {
         const start = Date.now();
         const oldState = client.conversation_stage;
 
-        // Don't save transient states or same state as history
-        const dataToUpdate = { conversation_stage: newState, ...extraData };
-        if (oldState && oldState !== newState && oldState !== 'SAIR' && oldState !== 'APAGAR') {
-            dataToUpdate.last_conversation_stage = oldState;
+        // Load or init session
+        const session = client.current_session || {};
+        const stack = session.flow_stack || [];
+
+        // Rules for stack:
+        // 1. Don't push same state twice consecutively
+        // 2. Don't push purely transient/fallback states
+        // 3. Limit stack size to 10
+        if (oldState && oldState !== newState && !['SAIR', 'APAGAR', 'VOLTARV'].includes(oldState)) {
+            stack.push(oldState);
+            if (stack.length > 10) stack.shift();
         }
 
-        client.update(dataToUpdate)
-            .then(() => logger.info(`[DB_UPDATE] ${oldState} -> ${newState} saved in ${Date.now() - start}ms`))
-            .catch(err => logger.error(`[DB_UPDATE_ERROR] ${err.message}`));
+        const dataToUpdate = {
+            conversation_stage: newState,
+            current_session: { ...session, flow_stack: stack, free_text_count: 0 } // Reset free text on menu move
+        };
+
+        await client.update(dataToUpdate);
+        logger.info(`[STACK_PUSH] ${oldState} -> ${newState} | Stack: ${stack.join(',')} (${Date.now() - start}ms)`);
+    }
+
+    async popState(client) {
+        const start = Date.now();
+        const session = client.current_session || {};
+        const stack = session.flow_stack || [];
+
+        if (stack.length === 0) {
+            await client.update({ conversation_stage: 'START' });
+            return 'START';
+        }
+
+        const targetState = stack.pop();
+        await client.update({
+            conversation_stage: targetState,
+            current_session: { ...session, flow_stack: stack }
+        });
+
+        logger.info(`[STACK_POP] To ${targetState} | Remainder: ${stack.length} (${Date.now() - start}ms)`);
+        return targetState;
+    }
+
+    // ---------------------------------------------------------
+    // 2. INTENT CLASSIFIER (Router)
+    // ---------------------------------------------------------
+
+    async classifyIntent(text) {
+        const start = Date.now();
+        const prompt = `
+        Analise a mensagem do usuário e determine qual opção do menu melhor se aplica.
+        Retorne APENAS o ID do estado correspondente da lista abaixo. Se não souber, retorne "UNKNOWN".
+        
+        CONTEXTO DE ESTADOS:
+        - MENU1: Cobrança, dívida, parcelas vencendo, laudo de clima, frustração de safra.
+        - MENU2: Alongamento, prorrogação, aumentar prazo, reduzir valor da parcela.
+        - MENU3: Garantias, riscos sobre bens, imóvel da família, herança, temor de perda de terra.
+        - MENU4: Ambiental, CAR, Embargo, crédito travado por pendência ambiental.
+        - MENU5: Resumos, explicações simples, normas do crédito rural.
+        - HANDOFF0: Falar com advogado, atendimento humano, citação judicial, intimação, processo correndo.
+        - TRIAGEM8: Quer fazer uma triagem, quer ajuda para escolher por onde começar.
+        - DOCS9: Quer ver o checklist de documentos.
+        
+        REGRAS:
+        - Não responda à mensagem.
+        - Se for apenas saudação (oi, olá), não use este classificador (será tratado separadamente).
+        - Se for urgência judicial clara, use HANDOFF0.
+        
+        MENSAGEM: "${text}"
+        ID:`;
+
+        try {
+            const response = await openai.chat.completions.create({
+                model: "gpt-4o",
+                messages: [{ role: "system", content: "Você é um roteador de intenções focado em agronegócio." }, { role: "user", content: prompt }],
+                temperature: 0,
+                max_tokens: 10
+            });
+
+            const result = response.choices[0].message.content.trim().toUpperCase();
+            logger.info(`[INTENT_CLASSIFIED] Result: ${result} in ${Date.now() - start}ms`);
+            return result === 'UNKNOWN' ? null : result;
+        } catch (err) {
+            logger.error(`[CLASSIFIER_ERROR]: ${err.message}`);
+            return null;
+        }
     }
 
     async generateResponse(clientNumber, textInput) {
         const startTime = Date.now();
         const input = textInput.trim();
-        const upperInput = input.toUpperCase(); // Normalize for command checks
+        const upperInput = input.toUpperCase();
 
         logger.info(`[GEN_START] Client: ${clientNumber} | Input: "${input}"`);
 
         try {
             // 1. Load Client
-            const dbStart = Date.now();
             const client = await ClientService.findOrCreateClient(clientNumber);
-            logger.info(`[DB_CLIENT_LOADED] in ${Date.now() - dbStart}ms`);
-
             const stage = client.conversation_stage || 'START';
+            const session = client.current_session || {};
 
             // ---------------------------------------------------------
-            // 2. GLOBAL ROUTER (Priority High)
+            // 2. GLOBAL ROUTER (Deterministic & Instant)
             // ---------------------------------------------------------
             if (upperInput === 'SAIR' || upperInput === 'ENCERRAR') {
-                this.updateState(client, 'SAIR');
+                await this.pushState(client, 'SAIR');
                 return STATE_TEXTS.SAIR;
             }
             if (upperInput === 'APAGAR' || upperInput === 'EXCLUIR') {
-                this.updateState(client, 'APAGAR');
+                await this.pushState(client, 'APAGAR');
                 return STATE_TEXTS.APAGAR;
             }
             if (upperInput === 'M' || upperInput === 'MENU' || upperInput === 'INICIO') {
-                this.updateState(client, 'MENUPRINCIPAL');
+                await this.pushState(client, 'MENUPRINCIPAL');
                 return STATE_TEXTS.MENUPRINCIPAL;
             }
             if (upperInput === '0' || upperInput === 'HUMANO' || upperInput === 'ADVOGADO') {
-                this.updateState(client, 'HANDOFF0');
+                await this.pushState(client, 'HANDOFF0');
                 return STATE_TEXTS.HANDOFF0;
             }
-            // GREETINGS -> RESET TO START (User Expectation)
-            const isGreeting = /^(OI|OLA|OLÁ|OIE|BOM DIA|BOA TARDE|BOA NOITE)/.test(upperInput);
-            if (isGreeting) {
-                this.updateState(client, 'START');
+            if (/^(OI|OLA|OLÁ|OIE|BOM DIA|BOA TARDE|BOA NOITE)/.test(upperInput)) {
+                await this.pushState(client, 'START');
                 return STATE_TEXTS.START;
             }
             if (upperInput === '8' || upperInput === 'TRIAGEM') {
-                this.updateState(client, 'TRIAGEM8');
+                await this.pushState(client, 'TRIAGEM8');
                 return STATE_TEXTS.TRIAGEM8;
             }
             if (upperInput === '9' || upperInput === 'CHECKLIST') {
-                this.updateState(client, 'DOCS9');
+                await this.pushState(client, 'DOCS9');
                 return STATE_TEXTS.DOCS9;
             }
-            // VOLTAR (V)
             if (upperInput === 'V' || upperInput === 'VOLTAR') {
-                const target = client.last_conversation_stage || 'MENUPRINCIPAL';
-                this.updateState(client, target); // Will update last_state again, behaving like a simple toggler or stack depending on logic. Simpler here: just go back.
+                const target = await this.popState(client);
                 return STATE_TEXTS[target] || STATE_TEXTS.MENUPRINCIPAL;
             }
 
             // ---------------------------------------------------------
-            // 3. HYBRID START (1 -> Triagem, 2 -> Menu)
+            // 3. DETERMINISTIC NAVIGATION (Instant Switch)
             // ---------------------------------------------------------
-            if (stage === 'START' || stage === 'START_CHOBOT') {
-                if (input === '1') {
-                    this.updateState(client, 'TRIAGEM8');
-                    return STATE_TEXTS.TRIAGEM8;
+            const isNumeric = /^\d+$/.test(input) && input.length <= 2;
+            if (isNumeric) {
+                let nextState = null;
+                if (stage === 'START') {
+                    if (input === '1') nextState = 'TRIAGEM8';
+                    if (input === '2') nextState = 'MENUPRINCIPAL';
+                } else if (stage === 'MENUPRINCIPAL') {
+                    const map = { '1': 'MENU1', '2': 'MENU2', '3': 'MENU3', '4': 'MENU4', '5': 'MENU5', '0': 'HANDOFF0' };
+                    nextState = map[input];
+                } else if (stage === 'MENU1') {
+                    const map = { '1': 'M1CLIMA', '2': 'M1CAIXA', '3': 'M1PROPOSTA', '4': 'M1CHECKLIST', '5': 'M1URGENTE' };
+                    nextState = map[input];
+                } else if (stage === 'MENU2') {
+                    const map = { '1': 'M2CICLOLONGO', '2': 'M2REDUZIR_PARCELA', '3': 'M2DIFERENCA', '4': 'M2CHECKLIST_BANCO', '5': 'M2PONTOSATENCAO' };
+                    nextState = map[input];
+                } else if (stage === 'MENU3') {
+                    const map = { '1': 'M3GARANTIAGERAL', '2': 'M3PROPRIEDADEFAMILIA', '3': 'M3RISCOSITUACOES', '4': 'M3CHECKLISTGARANTIAS', '5': 'M3URGENTEJUDICIAL' };
+                    nextState = map[input];
+                } else if (stage === 'MENU4') {
+                    const map = { '1': 'M4CARPASSOS', '2': 'M4EMBARGOCREDITO', '3': 'M4CHECKLISTANTESFINANCIAR', '4': 'M4PENDENCIAPASSOS', '5': 'M4ZARCINFO' };
+                    nextState = map[input];
+                } else if (stage === 'MENU5') {
+                    const map = { '1': 'RESUMO1PRORROGACAO', '2': 'RESUMO2RENEGOCIACAO', '3': 'RESUMO3ALONGAMENTO', '4': 'RESUMO4AMBIENTAL', '5': 'RESUMO5GARANTIAS' };
+                    nextState = map[input];
                 }
-                if (input === '2') {
-                    this.updateState(client, 'MENUPRINCIPAL');
-                    return STATE_TEXTS.MENUPRINCIPAL;
+
+                if (nextState) {
+                    await this.pushState(client, nextState);
+                    return STATE_TEXTS[nextState];
                 }
-                // Fallback for Start
-                return STATE_TEXTS.START; // Re-send intro
             }
 
             // ---------------------------------------------------------
-            // 4. TRIAGEM PARSER (A-2-3)
+            // 4. TRIAGEM PARSER (Deterministic Logic)
             // ---------------------------------------------------------
             if (stage === 'TRIAGEM8') {
-                // Regex for Letter (A-D) ... Number (1-3) ... Number (1-4)
-                // Flexible with spaces and separators
                 const match = upperInput.match(/([A-D])\s*[-/.,]?\s*([1-3])\s*[-/.,]?\s*([1-4])/);
-
                 if (match) {
-                    const [_full, tema, urgencia, doc] = match;
-
-                    // Critical Urgency Rule
+                    const [_full, tema, urgencia, _doc] = match;
                     if (urgencia === '1') {
-                        this.updateState(client, 'HANDOFF0', { last_triagem: input });
+                        await this.pushState(client, 'HANDOFF0');
                         return STATE_TEXTS.TRIAGEM_DONE_URGENTE;
                     }
-
-                    // Route by Theme
-                    let targetState = 'MENUPRINCIPAL';
-                    if (tema === 'A') targetState = 'MENU1';
-                    if (tema === 'B') targetState = 'MENU2';
-                    if (tema === 'C') targetState = 'MENU3';
-                    if (tema === 'D') targetState = 'MENU4';
-
-                    this.updateState(client, targetState, { last_triagem: input });
-                    // Provide a small UX bridge if documents are in hand, or just show the menu
-                    // User requested direct menu show
-                    return STATE_TEXTS[targetState];
-                }
-
-                // Fallback for Triagem
-                return STATE_TEXTS.FALLBACK_ANY;
-            }
-
-            // ---------------------------------------------------------
-            // 5. DETERMINISTIC MENU ROUTING
-            // ---------------------------------------------------------
-            let responseText = "";
-            const isNumeric = /^\d+$/.test(input) && input.length <= 2;
-
-            if (isNumeric) {
-                switch (stage) {
-                    case 'MENUPRINCIPAL':
-                        if (input === '1') { this.updateState(client, 'MENU1'); responseText = STATE_TEXTS.MENU1; }
-                        else if (input === '2') { this.updateState(client, 'MENU2'); responseText = STATE_TEXTS.MENU2; }
-                        else if (input === '3') { this.updateState(client, 'MENU3'); responseText = STATE_TEXTS.MENU3; }
-                        else if (input === '4') { this.updateState(client, 'MENU4'); responseText = STATE_TEXTS.MENU4; }
-                        else if (input === '5') { this.updateState(client, 'MENU5'); responseText = STATE_TEXTS.MENU5; }
-                        else if (input === '0') { this.updateState(client, 'HANDOFF0'); responseText = STATE_TEXTS.HANDOFF0; }
-                        break;
-                    case 'MENU1':
-                        if (input === '1') { this.updateState(client, 'M1CLIMA'); responseText = STATE_TEXTS.M1CLIMA; }
-                        else if (input === '2') { this.updateState(client, 'M1CAIXA'); responseText = STATE_TEXTS.M1CAIXA; }
-                        else if (input === '3') { this.updateState(client, 'M1PROPOSTA'); responseText = STATE_TEXTS.M1PROPOSTA; }
-                        else if (input === '4') { this.updateState(client, 'M1CHECKLIST'); responseText = STATE_TEXTS.M1CHECKLIST; }
-                        else if (input === '5') { this.updateState(client, 'M1URGENTE'); responseText = STATE_TEXTS.M1URGENTE; }
-                        break;
-                    case 'MENU2':
-                        if (input === '1') { this.updateState(client, 'M2CICLOLONGO'); responseText = STATE_TEXTS.M2CICLOLONGO; }
-                        else if (input === '2') { this.updateState(client, 'M2REDUZIR_PARCELA'); responseText = STATE_TEXTS.M2REDUZIR_PARCELA; }
-                        else if (input === '3') { this.updateState(client, 'M2DIFERENCA'); responseText = STATE_TEXTS.M2DIFERENCA; }
-                        else if (input === '4') { this.updateState(client, 'M2CHECKLIST_BANCO'); responseText = STATE_TEXTS.M2CHECKLIST_BANCO; }
-                        else if (input === '5') { this.updateState(client, 'M2PONTOSATENCAO'); responseText = STATE_TEXTS.M2PONTOSATENCAO; }
-                        break;
-                    case 'MENU3':
-                        if (input === '1') { this.updateState(client, 'M3GARANTIAGERAL'); responseText = STATE_TEXTS.M3GARANTIAGERAL; }
-                        else if (input === '2') { this.updateState(client, 'M3PROPRIEDADEFAMILIA'); responseText = STATE_TEXTS.M3PROPRIEDADEFAMILIA; }
-                        else if (input === '3') { this.updateState(client, 'M3RISCOSITUACOES'); responseText = STATE_TEXTS.M3RISCOSITUACOES; }
-                        else if (input === '4') { this.updateState(client, 'M3CHECKLISTGARANTIAS'); responseText = STATE_TEXTS.M3CHECKLISTGARANTIAS; }
-                        else if (input === '5') { this.updateState(client, 'M3URGENTEJUDICIAL'); responseText = STATE_TEXTS.M3URGENTEJUDICIAL; }
-                        break;
-                    case 'MENU4':
-                        if (input === '1') { this.updateState(client, 'M4CARPASSOS'); responseText = STATE_TEXTS.M4CARPASSOS; }
-                        else if (input === '2') { this.updateState(client, 'M4EMBARGOCREDITO'); responseText = STATE_TEXTS.M4EMBARGOCREDITO; }
-                        else if (input === '3') { this.updateState(client, 'M4CHECKLISTANTESFINANCIAR'); responseText = STATE_TEXTS.M4CHECKLISTANTESFINANCIAR; }
-                        else if (input === '4') { this.updateState(client, 'M4PENDENCIAPASSOS'); responseText = STATE_TEXTS.M4PENDENCIAPASSOS; }
-                        else if (input === '5') { this.updateState(client, 'M4ZARCINFO'); responseText = STATE_TEXTS.M4ZARCINFO; }
-                        break;
-                    case 'MENU5':
-                        if (input === '1') { this.updateState(client, 'RESUMO1PRORROGACAO'); responseText = STATE_TEXTS.RESUMO1PRORROGACAO; }
-                        else if (input === '2') { this.updateState(client, 'RESUMO2RENEGOCIACAO'); responseText = STATE_TEXTS.RESUMO2RENEGOCIACAO; }
-                        else if (input === '3') { this.updateState(client, 'RESUMO3ALONGAMENTO'); responseText = STATE_TEXTS.RESUMO3ALONGAMENTO; }
-                        else if (input === '4') { this.updateState(client, 'RESUMO4AMBIENTAL'); responseText = STATE_TEXTS.RESUMO4AMBIENTAL; }
-                        else if (input === '5') { this.updateState(client, 'RESUMO5GARANTIAS'); responseText = STATE_TEXTS.RESUMO5GARANTIAS; }
-                        break;
+                    const temaMap = { 'A': 'MENU1', 'B': 'MENU2', 'C': 'MENU3', 'D': 'MENU4' };
+                    const next = temaMap[tema] || 'MENUPRINCIPAL';
+                    await this.pushState(client, next);
+                    return STATE_TEXTS[next];
                 }
             }
 
-            if (responseText) {
-                logger.info(`[ROUTED] ${stage} -> ${isNumeric} -> OK`);
-                return responseText;
+            // ---------------------------------------------------------
+            // 5. INTENT ROUTING (Smart Switch)
+            // ---------------------------------------------------------
+            // Only if not numeric and not a global command
+            // AND limit free text interations
+            const freeCount = (session.free_text_count || 0) + 1;
+            if (freeCount > 3) {
+                await this.pushState(client, 'MENUPRINCIPAL');
+                return "Para garantir foco no seu atendimento informativo, voltamos ao menu. Escolha uma opção:\n\n" + STATE_TEXTS.MENUPRINCIPAL;
+            }
+
+            // Detect Urgent Keywords first (Fast Path)
+            const urgencyKeywords = /CITAÇÃO|INTIMAÇÃO|PROTESTO|CARTÓRIO|PRAZO|OFICIAL DE JUSTIÇA/i;
+            if (urgencyKeywords.test(upperInput)) {
+                await this.pushState(client, 'HANDOFF0');
+                return `⚠️ Detectei urgência no seu relato.\n\n${STATE_TEXTS.HANDOFF0}`;
+            }
+
+            // AI Routing (Does NOT answer, just routes)
+            const identifiedIntent = await this.classifyIntent(input);
+            if (identifiedIntent && STATE_TEXTS[identifiedIntent]) {
+                await this.pushState(client, identifiedIntent);
+                return `Entendi que você busca sobre esse tema. Veja as informações:\n\n${STATE_TEXTS[identifiedIntent]}`;
             }
 
             // ---------------------------------------------------------
-            // 6. TEXT HANDOFF (Urgência) & FLOWS
+            // 6. FALLBACK / HANDOFF AS LAST RESORT
             // ---------------------------------------------------------
             if (stage === 'HANDOFF0') {
-                this.updateState(client, 'HANDOFFCONFIRM');
+                await this.pushState(client, 'HANDOFFCONFIRM');
                 BaserowService.saveLead({ phone: clientNumber, note: input, stage: 'HANDOFF' }).catch(() => { });
                 return STATE_TEXTS.HANDOFFCONFIRM;
             }
 
-            // Urgency Detection (Guardrail 8)
-            const urgencyKeywords = /CITAÇÃO|INTIMAÇÃO|PROTESTO|CARTÓRIO|PRAZO|OFICIAL DE JUSTIÇA/i;
-            if (urgencyKeywords.test(upperInput)) {
-                this.updateState(client, 'HANDOFF0');
-                // Return a custom header + the handoff text
-                return `⚠️ Detectei urgência no seu relato.\n\n${STATE_TEXTS.HANDOFF0}`;
-            }
+            // Update free text count if we reached here
+            await client.update({ current_session: { ...session, free_text_count: freeCount } });
 
-            // ---------------------------------------------------------
-            // 7. FALLBACK
-            // ---------------------------------------------------------
-            logger.info(`[FALLBACK] Input "${input}" not matched in stage ${stage}`);
-            return STATE_TEXTS.FALLBACK_ANY;
+            logger.info(`[FALLBACK] Input "${input}" not understood. Attempt ${freeCount}/3`);
+            return "Não entendi sua solicitação. Por favor, escolha uma opção numérica do menu ou digite 'Menu'.";
 
         } catch (error) {
-            logger.error(`[AGENT_ERROR]: ${error.message}`);
-            return "Ocorreu um erro. Digite M para voltar ao menu.";
+            logger.error(`[AGENT_ERROR]: ${error.message} \n ${error.stack}`);
+            return "Ocorreu um erro. Digite M para voltar ao menu principal.";
         }
     }
 }

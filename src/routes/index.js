@@ -9,7 +9,7 @@ const mediaProcessorRoutes = require('../features/Media_Processor/Media_Processo
 const clientRoutes = require('../features/Client/Client.routes');
 const externalContextRoutes = require('../features/External_Context/External_Context.routes');
 
-router.use('/uazapi', uazapiRoutes);
+// router.use('/uazapi', uazapiRoutes); // Disabled in V18.7 to use Z-api as primary
 router.use('/zapi', zapiRoutes);
 router.use('/ai-agent', aiAgentRoutes);
 router.use('/rag-core', ragCoreRoutes);

@@ -69,6 +69,9 @@ class UazapiService {
     }
 
     async processWebhook(payload) {
+        // GLOBAL DEBUG (V18.4): Log entire payload for textile troubleshooting
+        console.log("[UAZAPI_DEBUG] Incoming Webhook Payload:", JSON.stringify(payload, null, 2));
+
         // Since we now filter in the controller, we know EventType is 'messages'
         const message = payload.message;
         const phone = message.chatid.split('@')[0];
@@ -79,6 +82,7 @@ class UazapiService {
         // Handle text messages
         if (message.type === 'text' || message.text) {
             const finalText = message.text || message.content;
+            console.log(`[TEXT_DEBUG] Message detected: "${finalText}" from ${phone}`);
             if (finalText) {
                 // Non-blocking processing
                 (async () => {

@@ -99,9 +99,28 @@ class AIAgentService {
                 max_tokens: 10
             });
 
-            const result = response.choices[0].message.content.trim().toUpperCase();
-            logger.info(`[INTENT_CLASSIFIED] Result: ${result} in ${Date.now() - start}ms`);
-            return result === 'UNKNOWN' ? null : result;
+            const identifiedState = response.choices[0].message.content.trim().toUpperCase();
+
+            // Map to Friendly Names for UX (V18.1)
+            const friendlyNames = {
+                'MENU1': 'Dívida / Cobrança',
+                'MENU2': 'Alongamento de Prazo / Prorrogação',
+                'MENU3': 'Garantias / Riscos sobre Bens',
+                'MENU4': 'Ambiental (CAR / Embargo)',
+                'MENU5': 'Resumos e Normas',
+                'HANDOFF0': 'Atendimento Humano',
+                'TRIAGEM8': 'Triagem de Caso',
+                'DOCS9': 'Checklist de Documentos'
+            };
+
+            logger.info(`[INTENT_CLASSIFIED] State: ${identifiedState} in ${Date.now() - start}ms`);
+
+            if (identifiedState === 'UNKNOWN' || !STATE_TEXTS[identifiedState]) return null;
+
+            return {
+                id: identifiedState,
+                name: friendlyNames[identifiedState] || 'este tema'
+            };
         } catch (err) {
             logger.error(`[CLASSIFIER_ERROR]: ${err.message}`);
             return null;
@@ -120,6 +139,7 @@ class AIAgentService {
             const client = await ClientService.findOrCreateClient(clientNumber);
             const stage = client.conversation_stage || 'START';
             const session = client.current_session || {};
+            const freeCount = session.free_text_count || 0;
 
             // ---------------------------------------------------------
             // 2. GLOBAL ROUTER (Deterministic & Instant)
@@ -211,14 +231,13 @@ class AIAgentService {
             }
 
             // ---------------------------------------------------------
-            // 5. INTENT ROUTING (Smart Switch)
+            // 5. INTENT ROUTING & UNIFIED COUNTER (V18.1)
             // ---------------------------------------------------------
-            // Only if not numeric and not a global command
-            // AND limit free text interations
-            const freeCount = (session.free_text_count || 0) + 1;
-            if (freeCount > 3) {
+
+            // Rule: If limit reached, deny free text and force numeric selection
+            if (freeCount >= 3) {
                 await this.pushState(client, 'MENUPRINCIPAL');
-                return "Para garantir foco no seu atendimento informativo, voltamos ao menu. Escolha uma opção:\n\n" + STATE_TEXTS.MENUPRINCIPAL;
+                return "Você atingiu o limite de mensagens livres por segurança (3/3). Por favor, escolha uma opção numérica do menu para continuar:\n\n" + STATE_TEXTS.MENUPRINCIPAL;
             }
 
             // Detect Urgent Keywords first (Fast Path)
@@ -228,11 +247,11 @@ class AIAgentService {
                 return `⚠️ Detectei urgência no seu relato.\n\n${STATE_TEXTS.HANDOFF0}`;
             }
 
-            // AI Routing (Does NOT answer, just routes)
-            const identifiedIntent = await this.classifyIntent(input);
-            if (identifiedIntent && STATE_TEXTS[identifiedIntent]) {
-                await this.pushState(client, identifiedIntent);
-                return `Entendi que você busca sobre esse tema. Veja as informações:\n\n${STATE_TEXTS[identifiedIntent]}`;
+            // AI Routing (V18.1 Confirmation Template)
+            const result = await this.classifyIntent(input);
+            if (result && result.id) {
+                await this.pushState(client, result.id);
+                return `Entendi sua dúvida sobre **${result.name}**. Por favor, escolha a opção desejada neste menu:\n\n${STATE_TEXTS[result.id]}`;
             }
 
             // ---------------------------------------------------------
@@ -244,15 +263,16 @@ class AIAgentService {
                 return STATE_TEXTS.HANDOFFCONFIRM;
             }
 
-            // Update free text count if we reached here
-            await client.update({ current_session: { ...session, free_text_count: freeCount } });
+            // Increment unified free text count if we reached here
+            const newCount = freeCount + 1;
+            await client.update({ current_session: { ...session, free_text_count: newCount } });
 
-            logger.info(`[FALLBACK] Input "${input}" not understood. Attempt ${freeCount}/3`);
-            return "Não entendi sua solicitação. Por favor, escolha uma opção numérica do menu ou digite 'Menu'.";
+            logger.info(`[FALLBACK] Input not routed. Counter: ${newCount}/3`);
+            return `Não consegui identificar sua escolha (${newCount}/3). Por favor, use as opções numéricas ou comandos (M, V, 0).`;
 
         } catch (error) {
             logger.error(`[AGENT_ERROR]: ${error.message} \n ${error.stack}`);
-            return "Ocorreu um erro. Digite M para voltar ao menu principal.";
+            return "Ocorreu um erro técnico. Por favor, digite M para voltar ao início.";
         }
     }
 }

@@ -3,16 +3,30 @@ const MediaService = require('../Media_Processor/Media_Processor.service');
 const ClientService = require('../Client/Client.service');
 
 class ZapiService {
-    constructor() {
-        this.instanceId = process.env.ZAPI_INSTANCE_ID;
-        this.token = process.env.ZAPI_TOKEN;
-        this.clientToken = process.env.ZAPI_CLIENT_TOKEN;
-        // Base URL: https://api.z-api.io/instances/{instanceId}/token/{token}
-        this.baseUrl = `https://api.z-api.io/instances/${this.instanceId}/token/${this.token}`;
+    constructor() { }
+
+    getCredentials() {
+        return {
+            instanceId: process.env.ZAPI_INSTANCE_ID,
+            token: process.env.ZAPI_TOKEN,
+            clientToken: process.env.ZAPI_CLIENT_TOKEN
+        };
+    }
+
+    getBaseUrl(instanceId, token) {
+        return `https://api.z-api.io/instances/${instanceId}/token/${token}`;
     }
 
     async sendMessage(phone, message) {
         if (!message) return;
+
+        const { instanceId, token, clientToken } = this.getCredentials();
+        if (!instanceId || !token) {
+            console.error("[ZAPI_ERROR] Missing credentials in ENV");
+            return;
+        }
+
+        const baseUrl = this.getBaseUrl(instanceId, token);
 
         try {
             const payload = {
@@ -23,12 +37,12 @@ class ZapiService {
             const headers = {
                 'Content-Type': 'application/json'
             };
-            if (this.clientToken) {
-                headers['Client-Token'] = this.clientToken;
+            if (clientToken) {
+                headers['Client-Token'] = clientToken;
             }
 
             const start = Date.now();
-            await axios.post(`${this.baseUrl}/send-text`, payload, {
+            await axios.post(`${baseUrl}/send-text`, payload, {
                 headers,
                 timeout: 10000
             });

@@ -1,10 +1,9 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const { connectDB, sequelize } = require('./src/config/db');
 const routes = require('./src/routes/index');
-
-require('dotenv').config();
 
 const app = express();
 

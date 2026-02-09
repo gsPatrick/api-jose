@@ -69,9 +69,6 @@ class UazapiService {
     }
 
     async processWebhook(payload) {
-        // GLOBAL DEBUG (V18.3): Log entire payload for troubleshooting
-        console.log("[UAZAPI_DEBUG] Incoming Webhook Payload:", JSON.stringify(payload, null, 2));
-
         // Since we now filter in the controller, we know EventType is 'messages'
         const message = payload.message;
         const phone = message.chatid.split('@')[0];
@@ -94,12 +91,6 @@ class UazapiService {
         // Handle media (Audio / PTT)
         const isAudio = message.type === 'audio' || message.mediaType === 'audio' || message.type === 'ptt' || message.mediaType === 'ptt' || message.messageType === 'AudioMessage';
         if (isAudio) {
-            // DEBUG LOG (V18.3): Full payload for audio debugging
-            console.log("-----------------------------------------");
-            console.log("[AUDIO_DEBUG] Incoming Audio Payload:");
-            console.dir(message, { depth: null });
-            console.log("-----------------------------------------");
-
             const base64Audio = message.content?.base64 || message.base64;
             const audioUrl = message.content?.url || message.content?.URL || message.url || message.URL;
 
@@ -115,18 +106,13 @@ class UazapiService {
                     const mediaResult = await this.downloadMedia(message.messageid || message.id);
                     if (mediaResult && mediaResult.fileURL) {
                         workableUrl = mediaResult.fileURL;
-                        console.log(`[AUDIO_DEBUG] Resolved .enc to workable URL: ${workableUrl}`);
                     }
                 }
 
                 if (base64Audio) {
-                    console.log("[AUDIO_DEBUG] Processing via BASE64");
                     transcription = await MediaService.transcribeAudio(base64Audio, true);
                 } else if (workableUrl && !workableUrl.includes('.enc')) {
-                    console.log("[AUDIO_DEBUG] Processing via URL:", workableUrl);
                     transcription = await MediaService.transcribeAudio(workableUrl, false);
-                } else {
-                    console.error("[AUDIO_DEBUG] No workable audio content found (base64 or decrypted url)");
                 }
 
                 if (transcription) {

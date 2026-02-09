@@ -269,7 +269,10 @@ class AIAgentService {
                     const chunks = await RAGCoreService.searchChunks(embedding, 1);
 
                     if (chunks && chunks.length > 0 && chunks[0].similarity > 0.8) {
+                        logger.info(`[RAG_HIT] Found chunk for "${input.substring(0, 20)}..." with similarity ${chunks[0].similarity.toFixed(4)}`);
                         response += `\n\n🧠 **Complemento Técnico (MCR):**\n${chunks[0].text}`;
+                    } else {
+                        logger.info(`[RAG_MISS] No high-similarity chunk found for "${input.substring(0, 20)}..."`);
                     }
                 } catch (ragErr) {
                     logger.error(`[RAG_ERROR]: ${ragErr.message}`);

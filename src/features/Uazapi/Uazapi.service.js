@@ -31,7 +31,7 @@ class UazapiService {
 
             // Log detailed response for debugging if needed, but keep console clean
             const resData = response.data;
-            console.log(`[UAZAPI_SEND] Sent to ${phone} in ${duration}ms. Status: ${resData.status || 'OK'}`);
+            console.log(`[UAZAPI_SEND] Sent to ${phone} in ${duration}ms. Result:`, JSON.stringify(resData));
         } catch (error) {
             console.error("[UAZAPI_ERROR] Failed to send message:", error.response?.data || error.message);
         }

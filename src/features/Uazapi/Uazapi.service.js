@@ -37,6 +37,37 @@ class UazapiService {
         }
     }
 
+    /**
+     * Specialized method to download media from Uazapi storage/Meta CDN.
+     * Essential for handling encrypted (.enc) files.
+     */
+    async downloadMedia(messageId) {
+        try {
+            console.log(`[UAZAPI_MEDIA] Requesting download for message: ${messageId}`);
+
+            const payload = {
+                id: messageId,
+                return_link: true,
+                generate_mp3: false // Keep original OGG for Whisper efficiency
+            };
+
+            const response = await axios.post(`${this.baseUrl}/media/download`, payload, {
+                headers: {
+                    'token': this.token,
+                    'apikey': this.token,
+                    'Content-Type': 'application/json'
+                },
+                timeout: 15000
+            });
+
+            // Returns { fileURL: "...", mimetype: "...", ... }
+            return response.data;
+        } catch (error) {
+            console.error(`[UAZAPI_MEDIA_ERROR] Failed to download media: ${error.message}`);
+            return null;
+        }
+    }
+
     async processWebhook(payload) {
         // GLOBAL DEBUG (V18.3): Log entire payload for troubleshooting
         console.log("[UAZAPI_DEBUG] Incoming Webhook Payload:", JSON.stringify(payload, null, 2));
@@ -77,14 +108,25 @@ class UazapiService {
                 await this.sendMessage(phone, "🎧 Ouvindo seu áudio...");
 
                 let transcription = "";
+                let workableUrl = audioUrl;
+
+                // Handle encrypted (.enc) files by requesting a decrypted link from Uazapi
+                if (!base64Audio && (!workableUrl || workableUrl.includes('.enc'))) {
+                    const mediaResult = await this.downloadMedia(message.messageid || message.id);
+                    if (mediaResult && mediaResult.fileURL) {
+                        workableUrl = mediaResult.fileURL;
+                        console.log(`[AUDIO_DEBUG] Resolved .enc to workable URL: ${workableUrl}`);
+                    }
+                }
+
                 if (base64Audio) {
                     console.log("[AUDIO_DEBUG] Processing via BASE64");
                     transcription = await MediaService.transcribeAudio(base64Audio, true);
-                } else if (audioUrl) {
-                    console.log("[AUDIO_DEBUG] Processing via URL:", audioUrl);
-                    transcription = await MediaService.transcribeAudio(audioUrl, false);
+                } else if (workableUrl && !workableUrl.includes('.enc')) {
+                    console.log("[AUDIO_DEBUG] Processing via URL:", workableUrl);
+                    transcription = await MediaService.transcribeAudio(workableUrl, false);
                 } else {
-                    console.error("[AUDIO_DEBUG] No audio content found (no base64 or url)");
+                    console.error("[AUDIO_DEBUG] No workable audio content found (base64 or decrypted url)");
                 }
 
                 if (transcription) {

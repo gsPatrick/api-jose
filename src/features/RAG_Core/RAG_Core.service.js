@@ -140,6 +140,49 @@ class RAGService {
         }
         return { valid: true };
     }
+
+    async initializeRAG() {
+        const count = await LegalChunk.count();
+        if (count > 0) {
+            console.log(`[RAG_INIT] Skipping seeding. Found ${count} existing chunks.`);
+            return;
+        }
+
+        console.log("[RAG_INIT] Database empty. Seeding core MCR rules...");
+        const seedData = [
+            {
+                doc_id: "MCR-CORE",
+                chunk_id: "2-6-4",
+                text: "MCR 2.6.4: O reembolso do crédito rural pode ser prorrogado pelo banco quando a comercialização dos produtos for dificultada por falta de mercado ou quando ocorrer quebra de safra devido a fatos imprevistos ou fenômenos naturais (seca, excesso de chuva, geada). É um direito do produtor quando comprovada a incapacidade de pagamento.",
+                source: "Manual de Crédito Rural (Bacen)"
+            },
+            {
+                doc_id: "MCR-CORE",
+                chunk_id: "2-6-9",
+                text: "MCR 2.6.9: Permite a recomposição de dívidas e o alongamento de prazos em operações de crédito rural quando houver frustração de safra ou queda acentuada de preços que impeçam o cumprimento do cronograma original. O banco deve avaliar a nova capacidade de pagamento do produtor.",
+                source: "Manual de Crédito Rural (Bacen)"
+            },
+            {
+                doc_id: "MCR-CORE",
+                chunk_id: "2-4-1",
+                text: "MCR 2.4.1: As taxas de juros no crédito rural são limitadas pelo Conselho Monetário Nacional. Instituições financeiras não podem cobrar encargos, taxas de consultoria ou juros acima dos limites oficiais para recursos controlados/subvencionados.",
+                source: "Manual de Crédito Rural (Bacen)"
+            },
+            {
+                doc_id: "AMBIENTAL-CORE",
+                chunk_id: "EMBARGO-1",
+                text: "Regras Ambientais: O crédito rural pode ser bloqueado se houver embargos vigentes por órgãos ambientais (IBAMA/Órgão Estadual) na propriedade ou se o CAR (Cadastro Ambiental Rural) apresentar pendências graves de sobreposição ou falta de reserva legal.",
+                source: "Legislação Ambiental e Bancária"
+            }
+        ];
+
+        for (const data of seedData) {
+            const embedding = await this.generateEmbedding(data.text);
+            await LegalChunk.create({ ...data, embedding });
+            console.log(`[RAG_SEED] Created chunk: ${data.chunk_id}`);
+        }
+        console.log("[RAG_INIT] Core seeding completed.");
+    }
 }
 
 module.exports = new RAGService();

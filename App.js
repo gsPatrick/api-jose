@@ -41,6 +41,10 @@ const startServer = async () => {
     const ClimateService = require('./src/features/External_Context/Climate/Climate.service');
     ClimateService.preloadStations().catch(err => console.error("Failed to pre-load stations:", err.message));
 
+    // Initialize RAG System (V18.2)
+    const RAGCoreService = require('./src/features/RAG_Core/RAG_Core.service');
+    RAGCoreService.initializeRAG().catch(err => console.error("Failed to initialize RAG:", err.message));
+
     // Sync models - Avoid alter:true in production/hot restarts
     await sequelize.sync();
 

@@ -247,11 +247,27 @@ class AIAgentService {
                 return `⚠️ Detectei urgência no seu relato.\n\n${STATE_TEXTS.HANDOFF0}`;
             }
 
-            // AI Routing (V18.1 Confirmation Template)
+            // AI Routing (V18.1 Confirmation Template + RAG Augmentation V18.2)
             const result = await this.classifyIntent(input);
             if (result && result.id) {
                 await this.pushState(client, result.id);
-                return `Entendi sua dúvida sobre **${result.name}**. Por favor, escolha a opção desejada neste menu:\n\n${STATE_TEXTS[result.id]}`;
+
+                let response = `Entendi sua dúvida sobre **${result.name}**. Por favor, escolha a opção desejada neste menu:\n\n${STATE_TEXTS[result.id]}`;
+
+                // Add RAG Insight if available
+                try {
+                    const RAGCoreService = require('../RAG_Core/RAG_Core.service');
+                    const embedding = await RAGCoreService.generateEmbedding(input);
+                    const chunks = await RAGCoreService.searchChunks(embedding, 1);
+
+                    if (chunks && chunks.length > 0 && chunks[0].similarity > 0.8) {
+                        response += `\n\n🧠 **Complemento Técnico (MCR):**\n${chunks[0].text}`;
+                    }
+                } catch (ragErr) {
+                    logger.error(`[RAG_ERROR]: ${ragErr.message}`);
+                }
+
+                return response;
             }
 
             // ---------------------------------------------------------

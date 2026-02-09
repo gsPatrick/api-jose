@@ -146,7 +146,9 @@ class AIAgentService {
             // ---------------------------------------------------------
             if (upperInput === 'SAIR' || upperInput === 'ENCERRAR') {
                 await this.pushState(client, 'SAIR');
-                return STATE_TEXTS.SAIR;
+                const res = STATE_TEXTS.SAIR;
+                logger.info(`[GEN_END] Result: ${res.substring(0, 50)}...`);
+                return res;
             }
             if (upperInput === 'APAGAR' || upperInput === 'EXCLUIR') {
                 await this.pushState(client, 'APAGAR');
@@ -154,7 +156,9 @@ class AIAgentService {
             }
             if (upperInput === 'M' || upperInput === 'MENU' || upperInput === 'INICIO') {
                 await this.pushState(client, 'MENUPRINCIPAL');
-                return STATE_TEXTS.MENUPRINCIPAL;
+                const res = STATE_TEXTS.MENUPRINCIPAL;
+                logger.info(`[GEN_END] Result: ${res.substring(0, 50)}...`);
+                return res;
             }
             if (upperInput === '0' || upperInput === 'HUMANO' || upperInput === 'ADVOGADO') {
                 await this.pushState(client, 'HANDOFF0');
@@ -162,7 +166,9 @@ class AIAgentService {
             }
             if (/^(OI|OLA|OLÁ|OIE|BOM DIA|BOA TARDE|BOA NOITE)/.test(upperInput)) {
                 await this.pushState(client, 'START');
-                return STATE_TEXTS.START;
+                const res = STATE_TEXTS.START;
+                logger.info(`[GEN_END] Result: ${res.substring(0, 50)}...`);
+                return res;
             }
             if (upperInput === '8' || upperInput === 'TRIAGEM') {
                 await this.pushState(client, 'TRIAGEM8');
@@ -208,7 +214,9 @@ class AIAgentService {
 
                 if (nextState) {
                     await this.pushState(client, nextState);
-                    return STATE_TEXTS[nextState];
+                    const res = STATE_TEXTS[nextState];
+                    logger.info(`[GEN_END] Result: ${res.substring(0, 50)}...`);
+                    return res;
                 }
             }
 
@@ -284,11 +292,15 @@ class AIAgentService {
             await client.update({ current_session: { ...session, free_text_count: newCount } });
 
             logger.info(`[FALLBACK] Input not routed. Counter: ${newCount}/3`);
-            return `Não consegui identificar sua escolha (${newCount}/3). Por favor, use as opções numéricas ou comandos (M, V, 0).`;
+            const fallbackMsg = `Não consegui identificar sua escolha (${newCount}/3). Por favor, use as opções numéricas ou comandos (M, V, 0).`;
+            logger.info(`[GEN_END] Result: ${fallbackMsg.substring(0, 50)}...`);
+            return fallbackMsg;
 
         } catch (error) {
             logger.error(`[AGENT_ERROR]: ${error.message} \n ${error.stack}`);
-            return "Ocorreu um erro técnico. Por favor, digite M para voltar ao início.";
+            const errorMsg = "Ocorreu um erro técnico. Por favor, digite M para voltar ao início.";
+            logger.info(`[GEN_END] Result: ${errorMsg}`);
+            return errorMsg;
         }
     }
 }

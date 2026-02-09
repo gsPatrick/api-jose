@@ -61,7 +61,7 @@ class UazapiService {
         }
 
         // Handle media (Audio / PTT)
-        const isAudio = message.type === 'audio' || message.mediaType === 'audio' || message.type === 'ptt';
+        const isAudio = message.type === 'audio' || message.mediaType === 'audio' || message.type === 'ptt' || message.mediaType === 'ptt' || message.messageType === 'AudioMessage';
         if (isAudio) {
             // DEBUG LOG (V18.3): Full payload for audio debugging
             console.log("-----------------------------------------");
@@ -70,7 +70,7 @@ class UazapiService {
             console.log("-----------------------------------------");
 
             const base64Audio = message.content?.base64 || message.base64;
-            const audioUrl = message.content?.url || message.url;
+            const audioUrl = message.content?.url || message.content?.URL || message.url || message.URL;
 
             (async () => {
                 // Send feedback immediately
@@ -93,7 +93,10 @@ class UazapiService {
                 } else {
                     await this.sendMessage(phone, "Não consegui entender o áudio. Pode escrever?");
                 }
-            })().catch(err => console.error("[AUDIO_PROCESS_ERROR]:", err.message));
+            })().catch(err => {
+                console.error("[AUDIO_PROCESS_ERROR]:", err.message);
+                this.sendMessage(phone, "⚠️ Erro no processamento de áudio: " + err.message).catch(() => { });
+            });
         }
 
         // Handle images

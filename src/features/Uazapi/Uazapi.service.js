@@ -38,6 +38,9 @@ class UazapiService {
     }
 
     async processWebhook(payload) {
+        // GLOBAL DEBUG (V18.3): Log entire payload for troubleshooting
+        console.log("[UAZAPI_DEBUG] Incoming Webhook Payload:", JSON.stringify(payload, null, 2));
+
         // Since we now filter in the controller, we know EventType is 'messages'
         const message = payload.message;
         const phone = message.chatid.split('@')[0];
@@ -60,6 +63,12 @@ class UazapiService {
         // Handle media (Audio / PTT)
         const isAudio = message.type === 'audio' || message.mediaType === 'audio' || message.type === 'ptt';
         if (isAudio) {
+            // DEBUG LOG (V18.3): Full payload for audio debugging
+            console.log("-----------------------------------------");
+            console.log("[AUDIO_DEBUG] Incoming Audio Payload:");
+            console.dir(message, { depth: null });
+            console.log("-----------------------------------------");
+
             const base64Audio = message.content?.base64 || message.base64;
             const audioUrl = message.content?.url || message.url;
 
@@ -69,9 +78,13 @@ class UazapiService {
 
                 let transcription = "";
                 if (base64Audio) {
+                    console.log("[AUDIO_DEBUG] Processing via BASE64");
                     transcription = await MediaService.transcribeAudio(base64Audio, true);
                 } else if (audioUrl) {
+                    console.log("[AUDIO_DEBUG] Processing via URL:", audioUrl);
                     transcription = await MediaService.transcribeAudio(audioUrl, false);
+                } else {
+                    console.error("[AUDIO_DEBUG] No audio content found (no base64 or url)");
                 }
 
                 if (transcription) {

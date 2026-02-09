@@ -51,7 +51,7 @@ class UazapiService {
                 generate_mp3: false // Keep original OGG for Whisper efficiency
             };
 
-            const response = await axios.post(`${this.baseUrl}/media/download`, payload, {
+            const response = await axios.post(`${this.baseUrl}/message/download`, payload, {
                 headers: {
                     'token': this.token,
                     'apikey': this.token,

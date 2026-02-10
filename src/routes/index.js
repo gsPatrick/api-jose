@@ -25,6 +25,10 @@ router.use('/external/bacen', bacenRoutes);
 const climateRoutes = require('../features/External_Context/Climate/Climate.routes');
 router.use('/external/climate', climateRoutes);
 
+// HubSpot Module Routes
+const hubspotRoutes = require('../features/External_Context/HubSpot/HubSpot.routes');
+router.use('/external/hubspot', hubspotRoutes);
+
 // System Diagnostics Routes
 const systemRoutes = require('../features/System/System.routes');
 router.use('/system', systemRoutes);

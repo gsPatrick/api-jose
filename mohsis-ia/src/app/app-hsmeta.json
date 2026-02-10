@@ -1,0 +1,26 @@
+{
+  "uid": "mohsis_ia_app",
+  "type": "app",
+  "config": {
+    "description": "Integração CRM Mohsis IA para gestão de leads de Direito Agrário.",
+    "name": "Mohsis IA",
+    "distribution": "private",
+    "auth": {
+      "type": "static",
+      "requiredScopes": [
+        "oauth",
+        "crm.objects.contacts.read",
+        "crm.objects.contacts.write"
+      ],
+      "optionalScopes": [],
+      "conditionallyRequiredScopes": []
+    },
+    "permittedUrls": {
+      "fetch": [
+        "https://api.hubapi.com"
+      ],
+      "iframe": [],
+      "img": []
+    }
+  }
+}

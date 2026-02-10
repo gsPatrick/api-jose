@@ -1,108 +1,444 @@
-// AIAgentStates.js - V17.2: Explicit Newlines for WhatsApp
-// Provimento 205/2021 - OAB Compliance
+// AIAgentStates.js - V19.0: Extended State Machine (56 States)
+// Direito Agrário & Bancário Specialist
 
-const FOOTER_DISCLAIMER = "\n\nℹ️ Conteúdo informativo (não é consulta). Para análise do seu caso, digite 0 (atendimento humano). M para menu. V para voltar.";
+const FOOTER = "\n\n(Comandos: M | V | 0 | S | P)";
 
 const STATE_TEXTS = {
-    // 1) FLUXO PRINCIPAL
-    START: `Mohsis:\nOlá! 👋 Eu sou o Mohsis, assistente virtual do escritório do Dr. Júnior Lopes.\n\n⚠️ Importante:\nEste atendimento é apenas informativo e não substitui uma análise jurídica individualizada. Não é consulta.\nUsamos IA com supervisão humana. Apesar do cuidado, podem ocorrer imprecisões; confirme com a equipe.\nSe houver prazo/urgência (cobrança formal, protesto, citação/intimação), digite 0.\n\nPara eu te direcionar melhor, escolha:\n1) ⚡ Triagem rápida (recomendado – 3 perguntas)\n2) 📋 Ver MENU completo agora\n\n(Comandos: M | V | 0 | 8 | 9 | SAIR | APAGAR)${FOOTER_DISCLAIMER}`,
+    // 00 - Disclaimer Inicial
+    PRIMEIRO_CONTATO: `Mohsis:
+Olá! Eu sou o Mohsis, assistente virtual do escritório do Dr. Júnior Lopes.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+MOHSIS — INFORMAÇÃO JURÍDICA PRELIMINAR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Antes de começarmos, é importante você saber:
+• Este é um serviço de INFORMAÇÃO JURÍDICA PRELIMINAR realizado com IA sob supervisão humana da equipe do Dr. Júnior Lopes.
+• Não substitui consulta com advogado especializado.
+• Não analiso documentos específicos nem garanto resultados.
+• Para decisões importantes, sempre procure um advogado especializado em Direito Agrário e Bancário.
+Seus dados estão protegidos (LGPD). Digite P ou PRIVACIDADE a qualquer momento.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Ao continuar você concorda com nossos termos.
 
-    MENUPRINCIPAL: `Mohsis:\nComo posso te ajudar hoje?\n\nMENU\n1) 💸 Parcela vencendo / dívida / cobrança\n2) 📆 Alongamento de prazo / reorganização de parcelas\n3) 🛡️ Garantias / risco sobre imóvel ou bens\n4) 🌳 CAR / embargo / ambiental e crédito\n5) 📚 Resumos: normas do crédito rural (linguagem simples)\n0) 👤 Atendimento humano (advogado(a) da equipe)\n\n(Comandos: M | V | 0 | 8 | 9 | SAIR | APAGAR)${FOOTER_DISCLAIMER}`,
+[1] CONTINUAR`,
 
-    // 2) TRIAGEM RÁPIDA
-    TRIAGEM8: `Mohsis:\nPerfeito — triagem rápida em 3 perguntas (responda tudo na mesma mensagem, no formato: LETRA-NÚMERO-NÚMERO. Ex.: A-2-3)\n\n1) Qual é o tema principal?\n   A) Parcela/dívida/cobrança\n   B) Alongamento/prazo\n   C) Garantias/imóvel/bens\n   D) Ambiental (CAR/embargo)/crédito travado\n\n2) Existe prazo/urgência (notificação, protesto, citação/intimação, parcela vence em até 7 dias)?\n   1) Sim  2) Não  3) Não sei\n\n3) Você tem algum documento em mãos agora?\n   1) Contrato/CCB/CPR\n   2) Extrato de parcelas\n   3) Print do banco/cartório/órgão ambiental\n   4) Nada por enquanto${FOOTER_DISCLAIMER}`,
+    // 01 - Menu Principal
+    START: `Mohsis:
+Como posso te ajudar hoje?
 
-    TRIAGEM_DONE_URGENTE: `Mohsis:\n✅ Obrigado. Como você indicou urgência/prazo, o recomendado é atendimento humano direto.\n\nEncaminhando para análise... digite 0 para confirmar.${FOOTER_DISCLAIMER}`,
+[1] Estou com dívida no banco e quero renegociar
+[2] Preciso de mais prazo para pagar (Alongamento)
+[3] Quero proteger minha propriedade da penhora
+[4] Preciso regularizar a documentação ambiental (CAR/Embargo)
+[5] Quero entender melhor a legislação (MCR/Leis)
+[6] Ver decisões da Justiça favoráveis aos produtores
+[7] Ver exemplos de casos que deram certo (Hipotéticos)
+[0] Prefiro falar direto com um especialista
 
-    // 3) MENU 1 (DÍVIDA)
-    MENU1: `Mohsis:\nEntendi. Escolha o que mais parece com sua situação:\n1) 🌦️ Produção caiu por clima/safra e a parcela apertou\n2) 📉 Preço caiu / custo subiu / caixa não fechou\n3) 🏦 Banco propôs “refazer” a dívida (novo contrato)\n4) 🧾 Checklist para organizar documentos e informações\n5) 🚨 Chegou notificação/protesto/cobrança formal\n(0 humano | 9 documentos | V voltar | M menu)${FOOTER_DISCLAIMER}`,
+[V] Voltar [S] Sair [P] Privacidade`,
 
-    M1CLIMA: `Mohsis:\n📌 Exemplo (hipotético): veio seca/enchente, colheu menos e a parcela chegou.\n🧠 Informação geral: costuma ser importante reunir provas do ocorrido e revisar contrato e cronograma. O caminho depende do tipo de operação e dos documentos.\n✅ Para organizar:\n• contrato/CCB/CPR (se tiver)\n• extrato de parcelas (vencimentos)\n• registros de produção/venda (se houver)\n• laudos/declarações técnicas (se houver)\nDigite 9 (checklist) | 0 (humano) | V (voltar) | M (menu)${FOOTER_DISCLAIMER}`,
+    // 02 - MENU 1: DÍVIDAS
+    MENU1: `Mohsis:
+Entendi que você está com dívida e quer renegociar. Qual situação se parece mais com a sua?
 
-    M1CAIXA: `Mohsis:\n📌 Exemplo (hipotético): colheu, mas preço caiu ou custo subiu e a parcela ficou pesada.\n🧠 Informação geral: ajuda mapear fluxo de caixa (entradas/saídas), parcelas e garantias. Sem documentos, não dá para indicar alternativa para o seu caso.\n✅ Para organizar:\n• extrato de parcelas e vencimentos\n• previsão de venda/recebimentos\n• contrato/CCB/CPR\nDigite 9 (checklist) | 0 (humano) | V (voltar) | M (menu)${FOOTER_DISCLAIMER}`,
+[1] Minha safra foi prejudicada por chuva/seca/gelo
+[2] O preço da minha produção caiu ou o custo subiu
+[3] O banco me ofereceu um novo contrato ("Refazer a dívida")
+[4] Quero saber que documentos preciso separar (Checklist)
+[5] Recebi notificação do banco, cartório ou juízo (URGÊNCIA)
+[0] Falar com especialista${FOOTER}`,
 
-    M1PROPOSTA: `Mohsis:\n📌 Exemplo (hipotético): banco sugeriu juntar tudo em novo contrato com novo prazo.\n🧠 Informação geral: antes de aceitar, é importante entender o que muda (encargos, custo total, garantias e condições).\n✅ Roteiro rápido:\n• qual taxa/encargos no novo contrato?\n• mudou a garantia?\n• qual o custo total ao final?\n• o prazo combina com seu ciclo produtivo?\nDigite 9 (roteiro completo) | 0 (humano) | V (voltar) | M (menu)${FOOTER_DISCLAIMER}`,
+    // 03 - 07: Detalhes Dívida
+    M1CLIMA: `Mohsis:
+Sobre dívidas quando a safra é prejudicada pelo clima:
+O Manual de Crédito Rural prevê que, em alguns casos, o banco pode analisar pedido de prorrogação quando há dificuldades causadas por eventos climáticos. Isso depende de:
+• Comprovação do evento (laudos técnicos)
+• Análise de viabilidade pelo banco
+• Negociação caso a caso
 
-    M1CHECKLIST: `Mohsis:\n✅ Checklist básico para organizar:\n1) Contrato/CCB/CPR ou proposta do banco\n2) Extrato com parcelas e vencimentos\n3) Comprovantes de produção/venda (se tiver)\n4) Se houve perda: laudo/declaração técnica (se tiver)\n5) Prints/mensagens com proposta do banco (se houver)\nDigite 0 (humano) | V (voltar) | M (menu)${FOOTER_DISCLAIMER}`,
+Importante: não existe direito automático. Cada banco tem suas próprias regras e análise de risco.
 
-    M1URGENTE: `Mohsis:\nEntendi. Notificação/protesto/cobrança formal costuma ter prazo.\n⚠️ Eu não posso orientar estratégia por aqui.\nSe puder, envie:\n• foto/print do documento\n• data do recebimento\n• quem enviou (banco/cartório/vara)\nDigite 0 (atendimento humano).\n⏱️ Pode haver prazo correndo. Eu não posso orientar estratégia por aqui. Envie foto/print e digite 0 para atendimento humano. M para menu. V para voltar.${FOOTER_DISCLAIMER}`,
+[4] Ver documentação para renegociação de dívida
+[0] Agendar com especialista${FOOTER}`,
 
-    // 4) MENU 2 (PRAZOS)
-    MENU2: `Mohsis:\nCerto. Escolha o tema:\n1) 🌱 Cultura/ciclo longo (retorno demora)\n2) 📆 Quero reduzir valor da parcela (mais prazo)\n3) 🔁 Diferença: prorrogar x alongar (simples)\n4) 🧾 Checklist para conversar com banco/organizar pedido\n5) ⚠️ Pontos de atenção (encargos/garantias)\n(0 humano | 9 documentos | V voltar | M menu)${FOOTER_DISCLAIMER}`,
+    M1CAIXA: `Mohsis:
+Sobre dívidas quando o preço cai ou o custo aumenta:
+Quando o dinheiro que você esperava receber não cobre o que precisa pagar, existem algumas possibilidades jurídicas:
+• Prorrogação: estender prazo de pagamento da parcela.
+• Alongamento: reorganizar todo o cronograma das parcelas.
 
-    M2CICLOLONGO: `Mohsis:\n🌱 Entendi — cultura/ciclo longo normalmente tem retorno mais demorado.\n🧠 Informação geral: quando o vencimento não “encaixa” com o ciclo produtivo, a conversa com o banco costuma focar em alinhar calendário de parcelas ao fluxo real de colheita/venda.\n📌 Exemplo (hipotético): investimento em cultura perene e as primeiras receitas demoram; parcela chega antes do caixa.\n✅ Para se preparar (organização):\n• cronograma do ciclo (plantio/tratos/colheita/venda)\n• previsão de receitas por mês/safra\n• extrato com parcelas/vencimentos\n• contrato/CCB/CPR e finalidade do crédito\n• comprovantes básicos de custos (insumos/serviços)\n🗣️ Modelo de mensagem ao banco:\n“Meu ciclo de receita ocorre em //_ a //__. As parcelas vencem em _//. Preciso reorganizar o calendário para que os vencimentos coincidam com a entrada de receita.”\nDigite 4 (checklist) | 0 (humano) | V (voltar) | M (menu)${FOOTER_DISCLAIMER}`,
+Ambas dependem de análise do banco e de demonstrar que o cronograma original ficou inviável devido à quebra de caixa.
 
-    M2REDUZIR_PARCELA: `Mohsis:\n📆 Entendi — você quer reduzir o valor da parcela aumentando prazo.\n🧠 Informação geral: alongar o prazo pode baixar a parcela mensal, mas pode aumentar o custo total (por juros/encargos). Por isso, é importante comparar cenários.\n✅ Roteiro prático (sem cálculo aqui):\n1) Peça ao banco 2–3 opções de prazo e a planilha/simulação do custo total.\n2) Compare:\n   • valor da parcela\n   • número de parcelas\n   • taxa/encargos\n   • custo total ao final\n   • garantias exigidas\n3) Confira se o novo calendário cabe no seu fluxo de caixa (mês a mês).\n📌 Exemplo de pedido ao banco:\n“Pode me enviar uma simulação com prazo de __ meses e outra de __ meses, com taxa, CET/custo total e garantias?”\nDigite 5 (pontos de atenção) | 4 (checklist) | 0 (humano) | V (voltar) | M (menu)${FOOTER_DISCLAIMER}`,
+[4] Ver documentação para renegociação de dívida
+[0] Agendar com especialista${FOOTER}`,
 
-    M2DIFERENCA: `Mohsis:\nBem simples:\n• Prorrogar = adiar uma data/parcela.\n• Alongar = reorganizar o cronograma por um período maior.\n📌 Exemplo: “empurrar um vencimento” vs “replanejar todo o calendário”.\nDigite 4 (checklist) | 0 (humano) | V (voltar) | M (menu)${FOOTER_DISCLAIMER}`,
+    M1PROPOSTA: `Mohsis:
+Sobre quando o banco oferece novo contrato:
+Renegociar pode envolver juntar dívidas, mudar prazos ou alterar garantias. Antes de aceitar qualquer proposta, costuma ser importante entender:
+• Qual o custo total (não só a parcela mensal)
+• Se as garantias mudaram (novo imóvel ou avalista?)
+• Se há cláusulas novas no contrato que limitam seus direitos
 
-    M2CHECKLIST_BANCO: `Mohsis:\n🧾 Checklist para conversar com banco (o que normalmente ajuda):\n1) Identificação da operação: número do contrato/CCB/CPR, agência, gerente.\n2) Extrato das parcelas: vencimentos e valores.\n3) Objetivo claro:\n   A) só adiar uma parcela (prorrogação)\n   B) reorganizar todo o cronograma (alongamento)\n4) Justificativa em 3 linhas (fato + impacto + pedido):\n   • “ocorreu __ (clima/preço/custo/ciclo) → impactou __ → solicito _.”\n5) Provas/apoio (se houver): laudo técnico, notas, relatórios, prints.\n6) Proposta de calendário realista (datas que cabem no seu ciclo).\n7) Perguntas essenciais ao banco:\n   • qual taxa/encargos?\n   • haverá tarifa/custo extra?\n   • mudou garantia?\n   • qual custo total ao final?\n   • quais documentos o banco exige?\nDigite 9 (checklist geral) | 0 (humano) | V (voltar) | M (menu)${FOOTER_DISCLAIMER}`,
+Cada proposta tem particularidades. Análise de contrato antes de assinar é recomendável.
 
-    M2PONTOSATENCAO: `Mohsis:\n⚠️ Pontos de atenção (informação geral):\nAlterar prazo pode mudar custo total e condições de garantia.\n✅ Antes de assinar algo, normalmente é prudente:\n• comparar custo total (não só a parcela)\n• confirmar garantias exigidas\n• verificar se o prazo combina com o ciclo produtivo\nDigite 0 (humano) | V (voltar) | M (menu)${FOOTER_DISCLAIMER}`,
+[4] Ver documentação para renegociação de dívida
+[0] Agendar com especialista${FOOTER}`,
 
-    // 5) MENU 3 (GARANTIAS)
-    MENU3: `Mohsis:\nEntendi. Aqui o foco é compreender garantias e riscos do contrato (informação geral).\n1) 🧾 Dei imóvel/maquinário como garantia — o que isso muda?\n2) 🏡 Dúvidas sobre propriedade usada pela família (informação geral)\n3) ⚠️ Situações comuns que aumentam risco de cobrança/medidas\n4) ✅ Checklist para avaliar documentos/garantias\n5) 🚨 Já chegou citação/intimação/documento judicial\n(0 humano | 9 documentos | V voltar | M menu)${FOOTER_DISCLAIMER}`,
+    M1DOCUMENTACAO: `Mohsis:
+📋 DOCUMENTAÇÃO PARA RENEGOCIAÇÃO DE DÍVIDA RURAL
 
-    M3GARANTIAGERAL: `Mohsis:\n📌 Exemplo (hipotético): você assinou financiamento com garantia e teme consequências.\n🧠 Informação geral: o que muda depende do tipo de garantia (ex.: hipoteca, alienação fiduciária, penhor, aval/fiança, CPR com garantia etc.) e das cláusulas do contrato. Sem documento, não dá para orientar seu caso aqui.\n✅ Para organizar:\n• contrato/CCB/CPR\n• documento da garantia (se houver)\n• extrato de parcelas\nDigite 4 (checklist garantias) | 0 (humano) | V (voltar) | M (menu)${FOOTER_DISCLAIMER}`,
+Organize os seguintes itens:
+1. Contrato original da operação (CCR, CPR ou CDC)
+2. Extrato completo de débito (vencimentos e pagamentos)
+3. Laudo técnico de assistência técnica Oficial (EMATER/AGRAER) ou particular
+4. Notas fiscais de venda vs. orçamento original
+5. Matrícula atualizada do imóvel (30 dias)
 
-    M3PROPRIEDADEFAMILIA: `Mohsis:\n🏡 Entendi — imóvel/terra é usado pela família e surgiram dúvidas.\n🧠 Informação geral (sem análise do seu caso): risco e responsabilidade podem variar conforme:\n• quem é o proprietário no registro (matrícula)\n• quem assinou o contrato\n• se a garantia foi formalmente registrada\n• se há coproprietários, herança/inventário, casamento/união estável, usufruto\n📌 Situações típicas (para você saber o que separar):\n1) “Está no nome do pai/mãe, mas quem financiou foi o filho.”\n2) “Terra é de herança e inventário não terminou.”\n3) “Imóvel é do casal, mas só um assinou.”\n4) “Há arrendamento/posse e não propriedade formal.”\n✅ O que ajuda a esclarecer (documentos):\n• matrícula atualizada do imóvel (cartório)\n• contrato/CCB/CPR\n• documento de estado civil (certidão/casamento), quando relevante\n• se for herança: info do inventário (nº do processo/termo)\n⚠️ Como isso pode envolver terceiros e prazos, o mais seguro é avaliação humana.\nDigite 0 (humano) | 4 (checklist) | V (voltar) | M (menu)${FOOTER_DISCLAIMER}`,
+⚠️ IMPORTANTE: NUNCA envie documentos por WhatsApp por questões de segurança.
 
-    M3RISCOSITUACOES: `Mohsis:\n⚠️ Situações comuns que aumentam risco de cobrança/medidas (informação geral):\n1) Atraso recorrente e falta de comunicação formal com o banco.\n2) Assinar “nova proposta” sem ler encargos/garantias.\n3) Garantia registrada (ex.: imóvel/maquinário) + inadimplência prolongada.\n4) Misturar dívidas (rural + pessoal) sem entender o que entra no novo contrato.\n5) Ignorar notificação/cartório/e-mails do banco.\n6) Vender bem dado em garantia sem verificar restrições.\n✅ Boa prática (organizacional):\n• manter tudo por escrito (protocolo/e-mail/WhatsApp do gerente)\n• guardar extratos e comunicações\n• pedir simulação/custo total antes de assinar\nDigite 4 (checklist garantias) | 0 (humano) | V (voltar) | M (menu)${FOOTER_DISCLAIMER}`,
+[0] Agendar com especialista${FOOTER}`,
 
-    M3CHECKLISTGARANTIAS: `Mohsis:\n✅ Checklist para avaliar documentos/garantias (sem parecer):\n1) Qual é a operação? (contrato/CCB/CPR) e data.\n2) Qual é o tipo de garantia indicada no contrato?\n3) A garantia foi registrada?\n   • Imóvel: matrícula com averbação/registro\n   • Veículo/maquinário: gravame/registro pertinente\n4) Quem assinou?\n   • titular/proprietário? cônjuge? avalista/fiança?\n5) Há cláusulas sobre:\n   • vencimento antecipado\n   • juros/mora/multa\n   • possibilidade de execução/medidas\n6) Situação atual:\n   • parcelas vencidas? quantas? data do primeiro atraso?\n7) Comunicação:\n   • recebeu notificação/protesto/citação?\nSe tiver documento judicial, digite 5.\nDigite 0 (humano) | 9 (checklist geral) | V (voltar) | M (menu)${FOOTER_DISCLAIMER}`,
+    M1URGENTE: `Mohsis:
+Sobre notificações do banco, cartório ou juízo:
+Esses documentos costumam ter prazos fatais para resposta. Não responder pode prejudicar sua defesa.
 
-    M3URGENTEJUDICIAL: `Mohsis:\nEntendi. Se já existe documento judicial, pode haver prazo.\n⚠️ Eu não consigo orientar estratégia por aqui.\nEnvie, se puder:\n• foto/print do documento\n• data do recebimento\n• qual órgão/vara/cartório aparece\nDigite 0 (atendimento humano).\n⏱️ Pode haver prazo correndo. Eu não posso orientar estratégia por aqui. Envie foto/print e digite 0 para atendimento humano. M para menu. V para voltar.${FOOTER_DISCLAIMER}`,
+⚠️ ALERTA DE RISCO: Se há prazo judicial correndo, este atendimento NÃO interrompe o prazo.
+RECOMENDAÇÃO: Se a urgência for clara, clique em 0 para agendar ou procure suporte presencial imediatamente.
 
-    // 6) MENU 4 (AMBIENTAL)
-    MENU4: `Mohsis:\nCerto. Escolha:\n1) 🧾 Entender situação do CAR (passos gerais)\n2) ⛔ Entender embargo e impacto em crédito (passos gerais)\n3) ✅ Checklist “antes de pedir financiamento”\n4) 🧩 O que fazer quando aparece pendência (passos gerais)\n5) 🌦️ ZARC (janela de plantio e risco – informação geral)\n(0 humano | 9 documentos | V voltar | M menu)${FOOTER_DISCLAIMER}`,
+[0] Agendar com urgência${FOOTER}`,
 
-    M4CARPASSOS: `Mohsis:\n🧾 Entendi — situação do CAR.\n📌 Exemplo (hipotético): no banco disseram que há pendência no CAR e o crédito travou.\n🧠 Passos gerais (sem análise do seu caso):\n1) Identificar qual mensagem/pendência aparece (print ajuda).\n2) Separar o que você tem: recibo CAR, demonstrativo, mapas, CPF/CNPJ, dados do imóvel.\n3) Verificar se é:\n   A) pendência cadastral (dados incompletos)\n   B) sobreposição (limites conflitantes)\n   C) restrição/alerta ambiental vinculado ao imóvel\n4) Anotar o que o banco está exigindo (ex.: “CAR analisado”, “sem sobreposição”, “sem embargo”).\n5) Organizar um plano de regularização (quando aplicável), com suporte técnico/órgão competente.\n⚠️ Para indicar o melhor caminho, é preciso ver prints/documentos.\nDigite 9 (checklist) | 0 (humano) | V (voltar) | M (menu)${FOOTER_DISCLAIMER}`,
+    // 08 - MENU 2: ALONGAMENTO
+    MENU2: `Mohsis:
+Entendi que você precisa de mais prazo para pagar. Qual situação se parece mais com a sua?
 
-    M4EMBARGOCREDITO: `Mohsis:\n⛔ Entendi — embargo e impacto em crédito.\n🧠 Informação geral: embargo/restrição ambiental pode gerar travas em operações de crédito porque o banco avalia risco e conformidade. O que importa é entender:\n1) Qual é a origem do embargo (qual órgão/autuação/área).\n2) Se a restrição é do imóvel todo ou de parte/área específica.\n3) Se existe documento formal (auto, termo, notificação) e datas.\n✅ Passos gerais (organização):\n• faça prints do que aparece (sistemas/gerente)\n• se tiver, separe auto/termo/notificação e mapas/coord.\n• registre: data em que soube, quem informou, e o que foi pedido pelo banco\n• evite “achismos”: peça ao banco a exigência por escrito\n⚠️ Se já chegou documento com prazo (autuação/intimação), o recomendado é humano.\nDigite 0 (humano) | 9 (checklist) | V (voltar) | M (menu)${FOOTER_DISCLAIMER}`,
+[1] Plantei cultura de longo prazo (café, fruta, eucalipto...)
+[2] Quero reduzir o valor da parcela mensal
+[3] Quero entender a diferença entre prorrogar e alongar
+[4] Quero saber que documentos preciso separar
+[5] Quero entender os riscos de mudar o prazo
+[0] Falar com especialista${FOOTER}`,
 
-    M4CHECKLISTANTESFINANCIAR: `Mohsis:\n✅ Checklist “antes de pedir financiamento” (boa prática geral):\n1) Documentos pessoais e do produtor (CPF/CNPJ, comprovantes básicos).\n2) Operação/atividade: finalidade do crédito e cronograma do ciclo.\n3) Imóvel/posse:\n   • matrícula/CCIR/ITR (o que você tiver)\n   • contrato de arrendamento/posse (se aplicável)\n4) Ambiental:\n   • recibo do CAR e prints da situação\n   • se houver: licenças/autorizações\n5) Produção/receita:\n   • histórico de venda (se tiver)\n   • previsão de receita da safra/ciclo\n6) Financeiro:\n   • extrato de parcelas de operações anteriores (se houver)\n   • lista de dívidas ativas (para não ser pego de surpresa)\n7) Perguntas ao banco (peça por escrito):\n   • exigências ambientais específicas\n   • garantias exigidas\n   • taxa/encargos e custo total estimado\nDigite 9 (checklist) | 0 (humano) | V (voltar) | M (menu)${FOOTER_DISCLAIMER}`,
+    M2CICLO: `Mohsis:
+Sobre prazo para culturas de longo retorno:
+O Manual de Crédito Rural prevê a possibilidade de análise de alongamento quando há incompatibilidade entre o ciclo da cultura e o prazo do financiamento.
+Exemplo: Café e fruticultura que levam anos para dar o primeiro retorno financeiro.
 
-    M4PENDENCIAPASSOS: `Mohsis:\n🧩 Entendi — apareceu uma pendência e você não sabe o que fazer.\n🧠 Passos gerais (organização):\n1) Identifique a pendência exata (print/foto da tela ou mensagem do gerente).\n2) Classifique em 1 linha:\n   A) “documental” (faltou documento)\n   B) “cadastro” (dados divergentes)\n   C) “ambiental” (CAR/embargo/licença)\n   D) “financeira” (restrição/atraso)\n3) Monte um pacote simples para análise:\n   • print da pendência\n   • contrato/CCB/CPR (se existir)\n   • extrato de parcelas (se houver)\n   • CAR/auto/termo (se for ambiental)\n4) Peça ao banco: “qual documento resolve?” e “qual prazo?”\n⚠️ Se houver prazo curto, protesto, notificação, citação/intimação: digite 0.\nDigite 0 (humano) | 9 (checklist) | V (voltar) | M (menu)${FOOTER_DISCLAIMER}`,
+[4] Ver documentação para alongamento
+[0] Agendar com especialista${FOOTER}`,
 
-    M4ZARCINFO: `Mohsis:\n🌦️ ZARC (informação geral):\nO ZARC (Zoneamento Agrícola de Risco Climático) é uma referência técnica usada para indicar janelas de plantio e níveis de risco por cultura/município.\n🧠 Por que isso importa no crédito/seguro (em geral):\n• pode influenciar exigências de seguro/condições de contratação\n• ajuda a planejar calendário e reduzir risco climático\n✅ Como usar na prática (sem entrar em detalhe técnico aqui):\n1) Identifique cultura e município.\n2) Consulte a janela de plantio indicada e o nível de risco.\n3) Guarde print/relatório para planejamento e para conversar com banco/seguradora.\n⚠️ Para orientar no seu caso (cultura/município/contrato), precisa análise humana.\nDigite 0 (humano) | V (voltar) | M (menu)${FOOTER_DISCLAIMER}`,
+    M2PARCELA: `Mohsis:
+Sobre reduzir o valor da parcela mensal:
+Aumentar o prazo pode diminuir o valor mensal, mas:
+• Pode aumentar o custo final (mais juros no tempo)
+• Pode exigir novas garantias exigidas pelo banco
+• Pode afetar sua classificação de risco
 
-    // 7) MENU 5 (RESUMOS)
-    MENU5: `Mohsis:\nPosso te passar um resumo em linguagem simples. Escolha:\n1) Prorrogação / atraso por safra/clima (noções gerais)\n2) Renegociação / refazer dívida (noções gerais)\n3) Alongamento / reorganizar prazo (noções gerais)\n4) Ambiental e crédito (noções gerais)\n5) Garantias e riscos (noções gerais)\n⚠️ Conteúdo informativo. Para aplicar ao seu caso, precisa análise humana.\n(0 humano | V voltar | M menu)${FOOTER_DISCLAIMER}`,
+[5] Ver riscos de alongamento
+[4] Ver documentação
+[0] Agendar com especialista${FOOTER}`,
 
-    RESUMO1PRORROGACAO: `Mohsis:\n📚 Noções gerais — Prorrogação (adiar parcela):\n• Em termos simples, é empurrar o vencimento de uma parcela/data.\n• Geralmente você precisa justificar o motivo e formalizar o pedido ao banco.\n• Guarde: contrato, extrato de parcelas e provas do motivo (se houver).\nDigite 9 (checklist) | 0 (humano) | V (voltar) | M (menu)${FOOTER_DISCLAIMER}`,
+    M2DIFERENCA: `Mohsis:
+A diferença em linguagem simples:
+• PRORROGAR = Empurrar uma data de pagamento para frente (dificuldade pontual).
+• ALONGAR = Mudar todo o cronograma de parcelas (plano original não funciona mais).
 
-    RESUMO2RENEGOCIACAO: `Mohsis:\n📚 Noções gerais — Renegociação/refazer dívida:\n• É quando o banco propõe novo contrato para “juntar” ou replanejar débitos.\n• O ponto principal é comparar custo total, encargos e garantias.\n• Nunca assine sem entender o que mudou.\nDigite 9 (checklist) | 0 (humano) | V (voltar) | M (menu)${FOOTER_DISCLAIMER}`,
+Qual se aplica depende da análise do seu contrato e do banco.
 
-    RESUMO3ALONGAMENTO: `Mohsis:\n📚 Noções gerais — Alongamento/reorganizar prazo:\n• É replanejar o cronograma por mais tempo para ajustar a parcela ao fluxo de caixa.\n• Pode reduzir parcela mensal, mas aumentar custo total.\n• Combine o calendário com seu ciclo produtivo.\nDigite M e escolha o Menu 2 (opção 4 para checklist) | 0 (humano) | V (voltar)${FOOTER_DISCLAIMER}`,
+[0] Agendar com especialista${FOOTER}`,
 
-    RESUMO4AMBIENTAL: `Mohsis:\n📚 Noções gerais — Ambiental e crédito:\n• Pendências em CAR/embargo/restrições podem travar crédito.\n• O caminho é identificar a pendência, separar documentos e pedir exigência por escrito.\n• Com prazo/intimação: encaminhar para humano.\nDigite M e escolha o Menu 4 (opção 4 pendência) | 0 (humano) | V (voltar)${FOOTER_DISCLAIMER}`,
+    M2DOCUMENTACAO: `Mohsis:
+📋 DOCUMENTAÇÃO PARA ALONGAMENTO DE PRAZO
 
-    RESUMO5GARANTIAS: `Mohsis:\n📚 Noções gerais — Garantias e riscos:\n• Risco depende do tipo de garantia, registro e cláusulas do contrato.\n• Separe: contrato, documento/registro da garantia e extrato de parcelas.\n• Se chegou documento judicial: prazo pode correr.\nDigite M e escolha o Menu 3 (opção 4 checklist) | 0 (humano) | V (voltar)${FOOTER_DISCLAIMER}`,
+Tenha em mãos:
+1. Contrato original e Cronograma Detalhado
+2. Projeto de Plantio e Cronograma Técnico de Produção
+3. Fluxo de Caixa Projetado vs. Realizado
+4. Matrícula atualizada do imóvel
 
-    // 8) GLOBAL COMMANDS / HANDOFF
-    HANDOFF0: `Mohsis:\nCerto. Vou encaminhar para atendimento humano com advogado(a) da equipe.\nPara organizar o retorno, envie:\n1) Nome\n2) Cidade/UF\n3) Tema (dívida/prazo/garantia/ambiental)\n4) O que é mais urgente (vencimento? cobrança? crédito travado?)\n5) Se tiver: foto/PDF do contrato e/ou extrato de parcelas\n🔒 Privacidade:\nOs dados serão usados apenas para retorno e agendamento.\nVocê pode encerrar com SAIR ou pedir exclusão com APAGAR.\nQual melhor horário para retorno?\nA) manhã  B) tarde  C) noite${FOOTER_DISCLAIMER}`,
+[0] Agendar com especialista${FOOTER}`,
 
-    HANDOFFCONFIRM: `Mohsis:\nObrigado. ✅ Registro feito para retorno.\nSe quiser, enquanto isso posso enviar um checklist para você separar o que tiver.\nDigite 9 (checklist) ou M (menu).${FOOTER_DISCLAIMER}`,
+    M2RISCOS: `Mohsis:
+⚠️ Riscos de mudar o prazo (Alongamento):
+1. O custo total da dívida costuma aumentar.
+2. O banco pode exigir o "vencimento antecipado" se as novas condições não forem cumpridas.
+3. Pode haver alteração na classificação de risco do produtor, dificultando novos créditos por um período.
 
-    DOCS9: `Mohsis:\n✅ Checklist geral (envie o que tiver, mesmo foto):\n1) Contrato/CCB/CPR ou proposta do banco\n2) Extrato com parcelas e vencimentos\n3) Comprovantes de produção/venda (se houver)\n4) Se houve perda: laudo/declaração técnica (se houver)\n5) Garantias: matrícula do imóvel / doc do maquinário / gravame (se houver)\n6) Ambiental: recibo CAR + prints / auto/termo de embargo (se o tema for crédito travado)\nSe você resumir em 1 frase (“parcela vence”, “recebi protesto”, “CAR pendente”), eu te digo o que priorizar.\n(8 triagem | 0 humano | V voltar | M menu)${FOOTER_DISCLAIMER}`,
+[0] Agendar com especialista${FOOTER}`,
 
-    SAIR: `Mohsis:\nTudo bem. Encerrando por aqui. 👋\nSe quiser voltar depois, mande “M”.${FOOTER_DISCLAIMER}`,
+    // 14 - MENU 3: PROTEÇÃO PATRIMONIAL
+    MENU3: `Mohsis:
+Entendi que você quer proteger sua propriedade. Qual situação se parece mais com a sua?
 
-    APAGAR: `Mohsis:\nCerto. Registrei seu pedido de exclusão do que foi enviado nesta conversa.\nSe precisar retomar no futuro, mande “M”.${FOOTER_DISCLAIMER}`,
+[1] Quero entender se minha propriedade é "Bem de Família"
+[2] Quero saber o que NÃO é protegido (exceções)
+[3] Minha propriedade está dada como garantia (Fidúcia/Hipoteca)
+[4] Quero saber que documentos preciso
+[5] Recebi documento judicial sobre meu imóvel
+[0] Falar com especialista${FOOTER}`,
 
-    VOLTARV: `Mohsis:\nOk! Voltando para a etapa anterior.\n(Se preferir, mande “M” para o menu principal.)${FOOTER_DISCLAIMER}`,
+    M3FAMILIA: `Mohsis:
+Sobre Bem de Família Rural (Lei Complementar 93/2024):
+A proteção impede a penhora para certas dívidas se:
+• A família morar no imóvel ou ele for a base da renda.
+• For a única pequena propriedade rural trabalhada pela família.
+• Respeitar os limites de módulos fiscais da região.
 
-    FALLBACKSTART: `Mohsis:\nNão entendi a opção.\nResponda com 1 ou 2.\n(Ou use comandos: 0, M, V)${FOOTER_DISCLAIMER}`,
+[2] Ver o que NÃO é protegido
+[4] Ver documentação${FOOTER}`,
 
-    FALLBACK_ANY: `Mohsis:\nPara eu te orientar com segurança, preciso manter a conversa no formato do menu.\nEscolha um número ou use um comando:\nM (menu) | V (voltar) | 8 (triagem) | 9 (checklist) | 0 (humano)${FOOTER_DISCLAIMER}`
+    M3EXCECOES: `Mohsis:
+O que NÃO é protegido (Imóvel pode ser leiloado):
+• Dívidas de pensão alimentícia.
+• Dívidas de empregados da própria fazenda (trabalhista).
+• Garantia fiduciária (quando você assinou dando a terra em garantia direta).
+• Impostos do próprio imóvel (ITR).
+
+[0] Agendar com especialista${FOOTER}`,
+
+    M3FIDUCIA: `Mohsis:
+Sobre imóvel em garantia (Alienação Fiduciária):
+Quando o imóvel está em Alienação Fiduciária, o banco é o "dono" até você pagar. Se houver atraso, o banco pode iniciar o processo de consolidação da propriedade sem ir ao juiz, através do Cartório.
+
+[4] Ver documentação
+[0] Agendar com especialista${FOOTER}`,
+
+    M3DOCUMENTACAO: `Mohsis:
+📋 DOCUMENTAÇÃO PARA PROTEÇÃO PATRIMONIAL
+
+Separe para análise:
+1. Matrícula atualizada (inteiro teor e ônus)
+2. Certidão de casamento ou união estável
+3. Comprovante de que reside ou produz no imóvel
+4. Contrato que originou a dívida/garantia
+
+[0] Agendar com especialista${FOOTER}`,
+
+    M3JUDICIAL: `Mohsis:
+Sobre documento judicial recebido:
+Citações e intimações têm prazos severos.
+⚠️ O agendamento NÃO interrompe prazos judiciais.
+
+RECOMENDAÇÃO: Clique em 0 agora para agilizar o contato ou procure seu advogado hoje mesmo.
+
+[0] Agendar com urgência${FOOTER}`,
+
+    // 20 - MENU 4: AMBIENTAL
+    MENU4: `Mohsis:
+Entendi que você precisa de regularização ambiental. Qual sua situação?
+
+[1] Quero entender sobre o CAR (Cadastro Ambiental Rural)
+[2] ⛔ Descobri que tenho embargo ou restrição no imóvel
+[3] Quero entender sobre Crédito Rural Sustentável
+[4] Quero saber que documentos separar
+[5] O banco disse que tem pendência e travou meu crédito
+[0] Falar com especialista${FOOTER}`,
+
+    M4CAR: `Mohsis:
+Sobre o CAR:
+É o registro obrigatório para todos os imóveis rurais. Se o CAR estiver suspenso ou com pendência de análise, o banco pode bloquear a liberação de novas parcelas ou novos créditos.
+
+[4] Ver documentação${FOOTER}`,
+
+    M4EMBARGO: `Mohsis:
+Sobre Embargos (IBAMA/Estadual):
+O embargo proíbe a exploração da área afetada. Além da multa, o maior dano é a suspensão automática de qualquer crédito rural vinculado àquela matrícula.
+
+[0] Agendar com especialista${FOOTER}`,
+
+    M4SUSTENTAVEL: `Mohsis:
+Crédito Rural Sustentável:
+Existem linhas de crédito (ex: Plano ABC) com taxas muito menores para quem recupera áreas ou tem práticas sustentáveis. Requisito básico: regularidade total no CAR.
+
+[4] Ver documentação${FOOTER}`,
+
+    M4DOCUMENTACAO: `Mohsis:
+📋 DOCUMENTAÇÃO AMBIENTAL
+
+Itens necessários:
+1. Recibo de Inscrição no CAR e Relatório de Pendências
+2. Mapa da propriedade (Shapefile se disponível)
+3. Notificação de Auto de Infração (se houver embargo)
+4. Licença de Operação ou Autorização de Desmate
+
+[0] Agendar com especialista${FOOTER}`,
+
+    M4PENDENCIA: `Mohsis:
+Banco travou o crédito por pendência?
+Pode ser:
+• Divergência de área na matrícula vs CAR.
+• Embargo em nome de proprietário anterior.
+• Nome em listas de restrição socioambiental.
+
+[0] Agendar com urgência${FOOTER}`,
+
+    // 26 - MENU 5: LEGISLAÇÃO (Resumos MCR)
+    MENU5: `Mohsis:
+Sobre qual tema quer entender a legislação?
+
+[1] Prorrogação de dívida (MCR 2-6-9)
+[2] Renegociação (MCR 2-6-4)
+[3] Alongamento (VNR e direito do devedor)
+[4] Leis Ambientais e Crédito
+[5] Garantias e Proteção do Patrimônio
+[0] Falar com especialista${FOOTER}`,
+
+    M5PRORROGACAO: `Mohsis:
+📚 Legislação - Prorrogação:
+Conforme o Manual de Crédito Rural (MCR 2-6-9), o banco deve analisar o pedido quando há dificuldade de comercialização ou frustração de safra por fatores adversos. É uma obrigação do banco analisar, mas você precisa provar a necessidade.${FOOTER}`,
+
+    M5RENEGOCIACAO: `Mohsis:
+📚 Legislação - Renegociação:
+Regida pelo MCR e normas do Banco Central. Diferente do alongamento, a renegociação é um novo acerto de vontades, onde o banco pode exigir novas taxas.${FOOTER}`,
+
+    M5ALONGAMENTO: `Mohsis:
+📚 Legislação - Alongamento:
+O STJ (Súmula 298) entende que o alongamento da dívida rural é um direito do devedor e não uma simples opção do banco, desde que preenchidos os requisitos legais.${FOOTER}`,
+
+    M5AMBIENTAL: `Mohsis:
+📚 Legislação - Ambiental:
+O Código Florestal e resoluções do CMN (Conselho Monetário Nacional) proíbem a concessão de crédito para imóveis com desmatamento ilegal ou pendências graves no CAR.${FOOTER}`,
+
+    M5GARANTIAS: `Mohsis:
+📚 Legislação - Garantias:
+A Lei 8.009/90 e a nova Lei do Bem de Família Rural protegem a sede da moradia e a pequena propriedade rural familiar de penhoras por dívidas da atividade produtiva, com algumas exceções importantes.${FOOTER}`,
+
+    // 32 - MENU 6: DECISÕES JUSTIÇA
+    MENU6: `Mohsis:
+Veja como a Justiça tem protegido produtores:
+
+[1] Prorrogação e alongamento (Garantia do prazo)
+[2] Safra prejudicada por condições climáticas (Provas)
+[0] Quero agendar análise do meu caso${FOOTER}`,
+
+    M6PRORROGACAO: `Mohsis:
+⚖️ Teses sobre Alongamento:
+Tribunais de MT e PR têm decidido que o banco não pode negar o alongamento se o produtor provar que a colheita foi perdida, mesmo que o banco queira que ele pegue um empréstimo novo mais caro.${FOOTER}`,
+
+    M6CLIMA: `Mohsis:
+⚖️ Teses sobre Clima:
+A Justiça aceita laudos particulares e meteorológicos como prova de que o clima impediu o pagamento, obrigando o banco a reduzir juros de mora e manter o produtor no campo.${FOOTER}`,
+
+    // 35 - MENU 7: CASOS REAIS
+    MENU7: `Mohsis:
+Exemplos de situações que deram certo:
+
+[1] Seca inesperada na soja
+[2] Contrato "disfarçado" e geada no café
+[3] Produtor prevenido e excesso de chuvas
+[4] Benefício da ação coletiva
+[5] Impenhorabilidade da pequena propriedade
+[0] Quero agendar análise do meu caso${FOOTER}`,
+
+    M7CASO1: `Mohsis:
+📌 Caso: Seca inesperada na Soja.
+Situação: Produtor perdeu 60% por El Niño.
+Solução: Justiça obrigou o banco a conceder alongamento por 7 anos com taxas originais, após o banco tentar cobrar tudo à vista.${FOOTER}`,
+
+    M7CASO2: `Mohsis:
+📌 Caso: Contrato "disfarçado" no Café.
+Situação: Banco fez o produtor assinar um empréstimo pessoal caro para pagar a dívida rural.
+Solução: A Justiça anulou o contrato pessoal e mandou voltar para as taxas do crédito rural.${FOOTER}`,
+
+    M7CASO3: `Mohsis:
+📌 Caso: Produtor Prevenido.
+Situação: Excesso de chuva impediu a colheita no prazo.
+Solução: Com laudos feitos na hora certa, o produtor evitou o protesto e conseguiu carência de 1 ano para a próxima parcela.${FOOTER}`,
+
+    M7CASO4: `Mohsis:
+📌 Caso: Ação Coletiva.
+Situação: Vários produtores de uma região afetada por praga.
+Solução: Decisão beneficiou todos da associação, suspendendo as execuções bancárias até a nova safra.${FOOTER}`,
+
+    M7CASO5: `Mohsis:
+📌 Caso: Impenhorabilidade.
+Situação: Banco tentou leiloar a sede da fazenda por dívida de insumos.
+Solução: Provado que era pequena propriedade familiar, o leilão foi cancelado permanentemente.${FOOTER}`,
+
+    // 44 - 46: PRIVACIDADE & CONFORMIDADE
+    PRIVACIDADE: `Mohsis:
+🔒 POLÍTICA DE PRIVACIDADE E LGPD
+Seus dados (nome, telefone, localização) são coletados apenas para fins de triagem e agendamento de atendimento jurídico.
+• Não compartilhamos dados com terceiros.
+• Você pode pedir a exclusão total digitando APAGAR.
+• O atendimento inicial é realizado por inteligência artificial sob supervisão.
+Ao continuar a conversa e fornecer dados de agendamento, você manifesta consentimento livre e informado.
+
+[1] CONTINUAR [M] MENU PRINCIPAL`,
+
+    TERMO_AGENDAMENTO: `Mohsis:
+Você solicitou falar com um especialista.
+Para darmos seguimento, preciso coletar algumas informações básicas que serão analisadas pela nossa equipe jurídica.
+Este procedimento não cria vínculo contratual imediato, mas serve para organizar o seu futuro atendimento.
+
+[1] ACEITO E QUERO PROSSEGUIR [V] VOLTAR`,
+
+    CONSENTIMENTO_LGPD: `Mohsis:
+✅ Consentimento: Você autoriza o tratamento dos seus dados pela nossa equipe para fins de agendamento jurídico?
+
+[1] SIM, EU AUTORIZO [2] NÃO, QUERO VOLTAR AO MENU`,
+
+    // 47 - COLETA DE DADOS (Lógica em Service)
+    AGENDAMENTO_COLETA: `Mohsis:
+Vamos organizar seu agendamento.
+Por favor, digite seu **NOME COMPLETO**:`,
+
+    AGENDAMENTO_CIDADE: `Mohsis:
+Obrigado! Agora, digite o **MUNICÍPIO e ESTADO (UF)** da sua propriedade:`,
+
+    AGENDAMENTO_URGENCIA: `Mohsis:
+Há alguma **urgência imediata** (ex: prazo judicial vencendo hoje ou amanhã)?
+[1] SIM [2] NÃO`,
+
+    // 48 - CONFIRMAÇÃO
+    CONFIRMACAO_DADOS: `Mohsis:
+📝 **CONFIRME SEUS DADOS PARA O AGENDAMENTO:**
+
+Nome: {{nome}}
+Localização: {{municipio}}
+Tema: {{tema}}
+Urgência: {{urgencia}}
+
+[1] TUDO CORRETO, PODE ENVIAR
+[2] PRECISO CORRIGIR ALGO`,
+
+    // 49 - HANDOFF
+    HANDOFFCONFIRM: `Mohsis:
+✅ **SOLICITAÇÃO ENCAMINHADA COM SUCESSO!**
+Protocolo: MOH-2025-{{protocolo}}
+
+Um advogado da equipe do Dr. Júnior Lopes entrará em contato em breve para dar seguimento ao seu atendimento.
+Por favor, aguarde nosso retorno neste número.
+
+[M] MENU INICIAL [S] SAIR`,
+
+    // 50 - 55: SISTEMA
+    POS_AGENDAMENTO: `Mohsis:
+Seu agendamento já foi encaminhado. Em breve nossa equipe entrará em contato.
+Deseja ver mais algum tema informativo enquanto aguarda?
+
+[M] MENU INICIAL [S] SAIR`,
+
+    SAIR: `Mohsis:
+Tudo bem. Encerrando por aqui. 👋
+O Dr. Júnior Lopes e sua equipe agradecem o contato. Caso precise de algo no futuro, basta mandar um "Oi" ou "M".`,
+
+    APAGAR_SOLICITACAO: `Mohsis:
+Certo. Você deseja apagar todas as informações fornecidas nesta conversa conforme o direito de exclusão da LGPD?
+
+[1] SIM, APAGAR TUDO [2] NÃO, MANTER`,
+
+    APAGAR_CONFIRMADO: `Mohsis:
+✅ Dados excluídos dos nossos registros temporários. Concluído com sucesso. 👋`,
+
+    LOOP_PROTECAO: `Mohsis:
+⚠️ Identifiquei muitas mensagens em sequência.
+Por segurança, preciso garantir que você é um produtor rural buscando informação.
+Deseja continuar a navegação?
+
+[1] SIM [S] SAIR`,
+
+    FALLBACK_ANY: `Mohsis:
+Para eu te orientar com segurança, por favor escolha uma das opções numeradas do menu ou use um dos comandos:
+M (Menu) | V (Voltar) | 0 (Especialista) | S (Sair) | P (Privacidade)`
 };
 
-const POLICY_TEXT = `
-GUARDRAILS DO BOT (regras internas):
-1) O bot NÃO emite parecer, NÃO diz “você tem direito”, NÃO recomenda ação judicial, NÃO define tese, NÃO calcula valores.
-2) O bot só entrega: explicações gerais, checklist, passos de organização e orientação para procurar atendimento humano.
-3) Se houver urgência (cobrança formal, notificação, protesto, prazo, citação/intimação), pedir foto/print e encaminhar para humano (0).
-4) Dados: coletar o mínimo.
-`;
-
-module.exports = { STATE_TEXTS, POLICY_TEXT };
+module.exports = { STATE_TEXTS };

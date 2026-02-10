@@ -1,0 +1,25 @@
+{
+    "uid": "mohsis_ia_webhooks",
+    "type": "webhooks",
+    "config": {
+        "settings": {
+            "targetUrl": "https://sistema-api.wfvklj.easypanel.host/api/external/hubspot/webhook",
+            "maxConcurrentRequests": 10
+        },
+        "subscriptions": {
+            "crmObjects": [
+                {
+                    "subscriptionType": "object.creation",
+                    "objectType": "contact",
+                    "active": true
+                },
+                {
+                    "subscriptionType": "object.propertyChange",
+                    "objectType": "contact",
+                    "propertyName": "lifecyclestage",
+                    "active": true
+                }
+            ]
+        }
+    }
+}

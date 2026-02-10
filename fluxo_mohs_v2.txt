@@ -1,10 +1,184 @@
-// AIAgentStates.js - V19.0: Extended State Machine (56 States)
-// Direito Agrário & Bancário Specialist
-// STRICT IMPLEMENTATION OF FLUXO MOHSIS V2 (DOCX)
+🤖 FLUXO MOHSIS — VERSÃO 3.0 (TOTALMENTE CORRIGIDA)
+📋 ESTRUTURA DE ESTADOS (NUMERAÇÃO CORRIGIDA)
+Table
+Copy
+Código
+Estado
+Função
+00
+PRIMEIRO_CONTATO
+Disclaimer inicial obrigatório
+01
+START
+Menu principal
+02
+MENU1
+Dívidas e renegociação
+03
+M1CLIMA
+Safra prejudicada
+04
+M1CAIXA
+Preço/custo
+05
+M1PROPOSTA
+Novo contrato do banco
+06
+M1DOCUMENTACAO
+Documentação para renegociação
+07
+M1URGENTE
+Notificação/cobrança
+08
+MENU2
+Alongamento de prazos
+09
+M2CICLO
+Cultura longo prazo
+10
+M2PARCELA
+Reduzir parcela
+11
+M2DIFERENCA
+Diferença prorrogar/alongar
+12
+M2DOCUMENTACAO
+Documentação para alongamento
+13
+M2RISCOS
+Riscos
+14
+MENU3
+Proteção patrimonial
+15
+M3FAMILIA
+Bem de família rural
+16
+M3EXCECOES
+Exceções
+17
+M3FIDUCIA
+Garantia fiduciária
+18
+M3DOCUMENTACAO
+Documentação para proteção patrimonial
+19
+M3JUDICIAL
+Documento judicial
+20
+MENU4
+Regularidade ambiental
+21
+M4CAR
+CAR
+22
+M4EMBARGO
+Embargos
+23
+M4SUSTENTAVEL
+Crédito sustentável
+24
+M4DOCUMENTACAO
+Documentação para regularidade ambiental
+25
+M4PENDENCIA
+Pendência identificada
+26
+MENU5
+Legislação
+27
+M5PRORROGACAO
+Prorrogação
+28
+M5RENEGOCIACAO
+Renegociação
+29
+M5ALONGAMENTO
+Alongamento
+30
+M5AMBIENTAL
+Ambiental
+31
+M5GARANTIAS
+Garantias
+32
+MENU6
+Decisões da Justiça favoráveis
+33
+M6PRORROGACAO
+Prorrogação e alongamento
+34
+M6CLIMA
+Safra prejudicada por clima
+35
+MENU7
+Exemplos hipotéticos
+36
+M7CASO1
+Seca inesperada na soja
+37
+M7CASO2
+Contrato "disfarçado" e geada
+38
+M7CASO3
+Produtor prevenido e chuvas
+39
+M7CASO4
+Benefício da ação coletiva
+40
+M7CASO5
+Impenhorabilidade da propriedade
+41
+M7CASO6
+Revisão de contrato por imprevisão
+42
+M7CASO7
+Negativa do seguro por detalhe técnico
+43
+M7CASO8
+Burocracia do PROAGRO
+44
+PRIVACIDADE
+Política de privacidade completa
+45
+TERMO_AGENDAMENTO
+Transparência comercial
+46
+CONSENTIMENTO_LGPD
+Consentimento específico
+47
+AGENDAMENTO_COLETA
+Coleta de dados
+48
+CONFIRMACAO_DADOS
+Confirmação dos dados coletados
+49
+HANDOFFCONFIRM
+Confirmação de encaminhamento
+50
+POS_AGENDAMENTO
+Pós-agendamento (bloqueio)
+51
+SAIR
+Encerramento
+52
+APAGAR_SOLICITACAO
+Solicitação de exclusão LGPD
+53
+APAGAR_CONFIRMADO
+Confirmação de exclusão
+54
+ERRO_ENTRADA
+Tratamento de erro
+55
+LOOP_PROTECAO
+Proteção contra spam
 
-const STATE_TEXTS = {
-    // 00 - Disclaimer Inicial
-    PRIMEIRO_CONTATO: `Mohsis:
+ESTADO 00: PRIMEIRO_CONTATO
+Copy
+STATE: PRIMEIRO_CONTATO
+
+Mohsis:
 Olá! Eu sou o Mohsis, assistente virtual do [Nome do Escritório].
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -30,10 +204,13 @@ Antes de começarmos, é importante você saber:
 
 Ao continuar você concorda com nossos termos.
 
-[1] CONTINUAR`,
+[1] CONTINUAR
 
-    // 01 - Menu Principal
-    START: `Mohsis:
+ESTADO 01: START (MENU PRINCIPAL)
+Copy
+STATE: START
+
+Mohsis:
 Como posso te ajudar hoje?
 
 [1] 💸 Estou com dívida no banco e quero renegociar
@@ -45,10 +222,13 @@ Como posso te ajudar hoje?
 [7] 📚 Ver exemplos de casos que deram certo
 [0] 🤝 Prefiro falar direto com um especialista
 
-[V] Voltar  [S] Sair  [P] Privacidade`,
+[V] Voltar  [S] Sair  [P] Privacidade
 
-    // 02 - MENU 1: DÍVIDAS
-    MENU1: `Mohsis:
+ESTADO 02: MENU1 (DÍVIDAS E RENEGOCIAÇÃO)
+Copy
+STATE: MENU1
+
+Mohsis:
 Entendi que você está com dívida e quer renegociar.
 
 Qual situação se parece mais com a sua?
@@ -60,10 +240,13 @@ Qual situação se parece mais com a sua?
 [5] 🚨 Recebi notificação do banco, cartório ou juízo
 [0] 🤝 Prefiro falar direto com um especialista
 
-[V] Voltar  [M] Menu inicial  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu inicial  [S] Sair  [P] Privacidade
 
-    // 03 - M1CLIMA
-    M1CLIMA: `Mohsis:
+ESTADO 03: M1CLIMA (SAFRA PREJUDICADA)
+Copy
+STATE: M1CLIMA
+
+Mohsis:
 Sobre dívidas quando a safra é prejudicada pelo clima:
 
 O Manual de Crédito Rural prevê que, em alguns casos, o banco
@@ -80,10 +263,13 @@ suas próprias regras e análise de risco.
 
 [4] 🧾 Ver documentação para renegociação de dívida
 [0] 🤝 Agendar com especialista
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 04 - M1CAIXA
-    M1CAIXA: `Mohsis:
+ESTADO 04: M1CAIXA (PREÇO/CUSTO)
+Copy
+STATE: M1CAIXA
+
+Mohsis:
 Sobre dívidas quando o preço cai ou o custo aumenta:
 
 Quando o dinheiro que você esperava receber não cobre o que
@@ -100,10 +286,13 @@ e projeção de pagamento.
 
 [4] 🧾 Ver documentação para renegociação de dívida
 [0] 🤝 Agendar com especialista
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 05 - M1PROPOSTA
-    M1PROPOSTA: `Mohsis:
+ESTADO 05: M1PROPOSTA (NOVO CONTRATO DO BANCO)
+Copy
+STATE: M1PROPOSTA
+
+Mohsis:
 Sobre quando o banco oferece novo contrato:
 
 Renegociar pode envolver juntar dívidas, mudar prazos ou
@@ -119,10 +308,13 @@ antes de assinar é recomendável.
 
 [4] 🧾 Ver documentação para renegociação de dívida
 [0] 🤝 Agendar com especialista
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 06 - M1DOCUMENTACAO
-    M1DOCUMENTACAO: `Mohsis:
+ESTADO 06: M1DOCUMENTACAO (DOCUMENTAÇÃO PARA RENEGOCIAÇÃO)
+Copy
+STATE: M1DOCUMENTACAO
+
+Mohsis:
 🧾 DOCUMENTAÇÃO PARA RENEGOCIAÇÃO DE DÍVIDA RURAL
 
 Conforme seu tema (dívidas e renegociação), organize:
@@ -154,10 +346,13 @@ nem depois do agendamento. O advogado indicará canal seguro
 (portal criptografado ou entrega física) no momento da consulta.
 
 [0] 🤝 Agendar com especialista
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 07 - M1URGENTE
-    M1URGENTE: `Mohsis:
+ESTADO 07: M1URGENTE (NOTIFICAÇÃO/COBRANÇA)
+Copy
+STATE: M1URGENTE
+
+Mohsis:
 Sobre notificações do banco, cartório ou juízo:
 
 Esses documentos costumam ter prazos para resposta.
@@ -176,10 +371,13 @@ ou defensoria pública hoje, mesmo que agende conosco para análise
 complementar.
 
 [0] 🤝 Agendar com urgência
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 08 - MENU2
-    MENU2: `Mohsis:
+ESTADO 08: MENU2 (ALONGAMENTO DE PRAZOS)
+Copy
+STATE: MENU2
+
+Mohsis:
 Entendi que você precisa de mais prazo para pagar.
 
 Qual situação se parece mais com a sua?
@@ -191,10 +389,13 @@ Qual situação se parece mais com a sua?
 [5] ⚠️ Quero entender os riscos de mudar o prazo
 [0] 🤝 Prefiro falar direto com um especialista
 
-[V] Voltar  [M] Menu inicial  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu inicial  [S] Sair  [P] Privacidade
 
-    // 09 - M2CICLO
-    M2CICLO: `Mohsis:
+ESTADO 09: M2CICLO (CULTURA LONGO PRAZO)
+Copy
+STATE: M2CICLO
+
+Mohsis:
 Sobre prazo para culturas de longo retorno:
 
 Café, frutas, eucalipto e outras culturas perenes demoram
@@ -209,10 +410,13 @@ de cada política de crédito. Não é automático.
 
 [4] 🧾 Ver documentação para alongamento de prazo
 [0] 🤝 Agendar com especialista
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 10 - M2PARCELA
-    M2PARCELA: `Mohsis:
+ESTADO 10: M2PARCELA (REDUZIR PARCELA)
+Copy
+STATE: M2PARCELA
+
+Mohsis:
 Sobre reduzir o valor da parcela mensal:
 
 Aumentar o prazo pode diminuir o que você paga por mês,
@@ -228,10 +432,13 @@ que não posso fazer por aqui.
 [5] ⚠️ Ver mais sobre os riscos de alongamento
 [4] 🧾 Ver documentação para alongamento de prazo
 [0] 🤝 Agendar com especialista
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 11 - M2DIFERENCA
-    M2DIFERENCA: `Mohsis:
+ESTADO 11: M2DIFERENCA (DIFERENÇA PRORROGAR/ALONGAR)
+Copy
+STATE: M2DIFERENCA
+
+Mohsis:
 A diferença entre prorrogar e alongar:
 
 PRORROGAR = empurrar uma data de pagamento para frente.
@@ -243,10 +450,13 @@ Geralmente quando o plano original não funciona mais.
 ⚠️ Qual se aplica depende do seu contrato e da análise do banco.
 
 [0] 🤝 Agendar com especialista
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 12 - M2DOCUMENTACAO
-    M2DOCUMENTACAO: `Mohsis:
+ESTADO 12: M2DOCUMENTACAO (DOCUMENTAÇÃO PARA ALONGAMENTO)
+Copy
+STATE: M2DOCUMENTACAO
+
+Mohsis:
 🧾 DOCUMENTAÇÃO PARA ALONGAMENTO DE PRAZO
 
 Conforme seu tema (alongamento de prazos), organize:
@@ -280,10 +490,13 @@ nem depois do agendamento. O advogado indicará canal seguro
 
 [5] ⚠️ Ver mais sobre os riscos de alongamento
 [0] 🤝 Agendar com especialista
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 13 - M2RISCOS
-    M2RISCOS: `Mohsis:
+ESTADO 13: M2RISCOS (RISCOS)
+Copy
+STATE: M2RISCOS
+
+Mohsis:
 Riscos de mudar o prazo do financiamento:
 
 • Custo total pode aumentar
@@ -294,10 +507,13 @@ Riscos de mudar o prazo do financiamento:
 ⚠️ São riscos típicos, não todos. Cada contrato é diferente.
 
 [0] 🤝 Agendar com especialista
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 14 - MENU3
-    MENU3: `Mohsis:
+ESTADO 14: MENU3 (PROTEÇÃO PATRIMONIAL)
+Copy
+STATE: MENU3
+
+Mohsis:
 Entendi que você quer proteger sua propriedade.
 
 Qual situação se parece mais com a sua?
@@ -309,10 +525,13 @@ Qual situação se parece mais com a sua?
 [5] 🚨 Recebi documento judicial sobre meu imóvel
 [0] 🤝 Prefiro falar direto com um especialista
 
-[V] Voltar  [M] Menu inicial  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu inicial  [S] Sair  [P] Privacidade
 
-    // 15 - M3FAMILIA
-    M3FAMILIA: `Mohsis:
+ESTADO 15: M3FAMILIA (BEM DE FAMÍLIA)
+Copy
+STATE: M3FAMILIA
+
+Mohsis:
 Sobre bem de família rural:
 
 A Lei Complementar 93/2024 criou proteção para imóvel rural
@@ -329,10 +548,13 @@ usado pela família, mas precisa cumprir requisitos:
 [2] ⚠️ Ver o que NÃO é protegido
 [4] 🧾 Ver documentação para proteção patrimonial
 [0] 🤝 Agendar com especialista
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 16 - M3EXCECOES
-    M3EXCECOES: `Mohsis:
+ESTADO 16: M3EXCECOES (EXCEÇÕES)
+Copy
+STATE: M3EXCECOES
+
+Mohsis:
 O que NÃO é protegido pelo bem de família rural:
 
 • Dívidas de empregados (trabalhistas)
@@ -349,10 +571,13 @@ Situações que complicam:
 
 [4] 🧾 Ver documentação para proteção patrimonial
 [0] 🤝 Agendar com especialista
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 17 - M3FIDUCIA
-    M3FIDUCIA: `Mohsis:
+ESTADO 17: M3FIDUCIA (GARANTIA FIDUCIÁRIA)
+Copy
+STATE: M3FIDUCIA
+
+Mohsis:
 Sobre imóvel dado como garantia no banco:
 
 Impenhorabilidade (proteção de bem de família) é diferente
@@ -368,10 +593,13 @@ O contrato prevê o que acontece em caso de atraso.
 
 [4] 🧾 Ver documentação para proteção patrimonial
 [0] 🤝 Agendar com especialista
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 18 - M3DOCUMENTACAO
-    M3DOCUMENTACAO: `Mohsis:
+ESTADO 18: M3DOCUMENTACAO (DOCUMENTAÇÃO PARA PROTEÇÃO PATRIMONIAL)
+Copy
+STATE: M3DOCUMENTACAO
+
+Mohsis:
 🧾 DOCUMENTAÇÃO PARA PROTEÇÃO PATRIMONIAL
 
 Conforme seu tema (proteção de patrimônio), organize:
@@ -411,10 +639,13 @@ nem depois do agendamento. O advogado indicará canal seguro
 
 [2] ⚠️ Ver o que NÃO é protegido pelo bem de família
 [0] 🤝 Agendar com especialista
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 19 - M3JUDICIAL
-    M3JUDICIAL: `Mohsis:
+ESTADO 19: M3JUDICIAL (DOCUMENTO JUDICIAL)
+Copy
+STATE: M3JUDICIAL
+
+Mohsis:
 Sobre documento judicial recebido:
 
 Citações e intimações têm prazos para resposta.
@@ -433,10 +664,13 @@ ou defensoria pública hoje, mesmo que agende conosco para análise
 complementar.
 
 [0] 🤝 Agendar com urgência
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 20 - MENU4
-    MENU4: `Mohsis:
+ESTADO 20: MENU4 (REGULARIDADE AMBIENTAL)
+Copy
+STATE: MENU4
+
+Mohsis:
 Entendi que você precisa de regularização ambiental.
 
 Qual situação se parece mais com a sua?
@@ -448,10 +682,13 @@ Qual situação se parece mais com a sua?
 [5] 🚨 O banco disse que tem pendência e travou meu crédito
 [0] 🤝 Prefiro falar direto com um especialista
 
-[V] Voltar  [M] Menu inicial  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu inicial  [S] Sair  [P] Privacidade
 
-    // 21 - M4CAR
-    M4CAR: `Mohsis:
+ESTADO 21: M4CAR (CAR)
+Copy
+STATE: M4CAR
+
+Mohsis:
 Sobre CAR (Cadastro Ambiental Rural):
 
 É um registro obrigatório de imóvel rural. Status possíveis:
@@ -467,10 +704,13 @@ e pode levar tempo.
 
 [4] 🧾 Ver documentação para regularidade ambiental
 [0] 🤝 Agendar com especialista
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 22 - M4EMBARGO
-    M4EMBARGO: `Mohsis:
+ESTADO 22: M4EMBARGO (EMBARGOS)
+Copy
+STATE: M4EMBARGO
+
+Mohsis:
 Sobre embargo ou restrição ambiental:
 
 Embargo é quando IBAMA ou órgão estadual proíbe atividades
@@ -484,10 +724,13 @@ de profissional ambiental.
 
 [4] 🧾 Ver documentação para regularidade ambiental
 [0] 🤝 Agendar com especialista
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 23 - M4SUSTENTAVEL
-    M4SUSTENTAVEL: `Mohsis:
+ESTADO 23: M4SUSTENTAVEL (CRÉDITO SUSTENTÁVEL)
+Copy
+STATE: M4SUSTENTAVEL
+
+Mohsis:
 Sobre Crédito Rural Sustentável:
 
 São linhas com critérios ambientais que podem ter taxas
@@ -502,10 +745,13 @@ orçamento do Plano Safra e análise do banco.
 
 [4] 🧾 Ver documentação para regularidade ambiental
 [0] 🤝 Agendar com especialista
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 24 - M4DOCUMENTACAO
-    M4DOCUMENTACAO: `Mohsis:
+ESTADO 24: M4DOCUMENTACAO (DOCUMENTAÇÃO PARA REGULARIDADE AMBIENTAL)
+Copy
+STATE: M4DOCUMENTACAO
+
+Mohsis:
 🧾 DOCUMENTAÇÃO PARA REGULARIDADE AMBIENTAL
 
 Conforme seu tema (regularidade ambiental), organize:
@@ -548,10 +794,13 @@ nem depois do agendamento. O advogado indicará canal seguro
 (portal criptografado ou entrega física) no momento da consulta.
 
 [0] 🤝 Agendar com especialista
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 25 - M4PENDENCIA
-    M4PENDENCIA: `Mohsis:
+ESTADO 25: M4PENDENCIA (PENDÊNCIA IDENTIFICADA)
+Copy
+STATE: M4PENDENCIA
+
+Mohsis:
 Sobre quando o banco identifica pendência ambiental:
 
 Pode ser CAR suspenso, embargo, ou outra restrição.
@@ -565,10 +814,13 @@ Recomendo agendar análise ambiental completa.
 ⏱️ Pendência não é suspensa durante o agendamento.
 
 [0] 🤝 Agendar com urgência
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 26 - MENU5
-    MENU5: `Mohsis:
+ESTADO 26: MENU5 (LEGISLAÇÃO)
+Copy
+STATE: MENU5
+
+Mohsis:
 Quer entender melhor sobre a legislação de crédito rural.
 Sobre qual tema?
 
@@ -579,10 +831,13 @@ Sobre qual tema?
 [5] 🛡️ Garantias e proteção do patrimônio
 [0] 🤝 Prefiro falar direto com um especialista
 
-[V] Voltar  [M] Menu inicial  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu inicial  [S] Sair  [P] Privacidade
 
-    // 27 - M5PRORROGACAO
-    M5PRORROGACAO: `Mohsis:
+ESTADO 27: M5PRORROGACAO (PRORROGAÇÃO)
+Copy
+STATE: M5PRORROGACAO
+
+Mohsis:
 Sobre prorrogação (MCR 2-6-9):
 
 É estender o prazo de pagamento de uma operação.
@@ -593,10 +848,13 @@ como eventos climáticos.
 justificativa e negociação.
 
 [0] 🤝 Agendar com especialista
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 28 - M5RENEGOCIACAO
-    M5RENEGOCIACAO: `Mohsis:
+ESTADO 28: M5RENEGOCIACAO (RENEGOCIAÇÃO)
+Copy
+STATE: M5RENEGOCIACAO
+
+Mohsis:
 Sobre renegociação:
 
 É fazer novo contrato para operação existente, podendo
@@ -606,10 +864,13 @@ mudar prazos, juros ou garantias.
 antes de assinar é recomendável.
 
 [0] 🤝 Agendar com especialista
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 29 - M5ALONGAMENTO
-    M5ALONGAMENTO: `Mohsis:
+ESTADO 29: M5ALONGAMENTO (ALONGAMENTO)
+Copy
+STATE: M5ALONGAMENTO
+
+Mohsis:
 Sobre alongamento (MCR 2-6-10):
 
 É reorganizar o cronograma de parcelas, não só adiar uma data.
@@ -619,10 +880,13 @@ Geralmente para ajustar ao fluxo real de caixa da propriedade.
 e análise do banco.
 
 [0] 🤝 Agendar com especialista
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 30 - M5AMBIENTAL
-    M5AMBIENTAL: `Mohsis:
+ESTADO 30: M5AMBIENTAL (AMBIENTAL)
+Copy
+STATE: M5AMBIENTAL
+
+Mohsis:
 Sobre legislação ambiental e crédito:
 
 CAR, embargos e regularidade ambiental são requisitos para
@@ -631,10 +895,13 @@ várias linhas de crédito, especialmente as sustentáveis.
 ⚠️ Normas mudam e exigências variam por programa e banco.
 
 [0] 🤝 Agendar com especialista
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 31 - M5GARANTIAS
-    M5GARANTIAS: `Mohsis:
+ESTADO 31: M5GARANTIAS (GARANTIAS)
+Copy
+STATE: M5GARANTIAS
+
+Mohsis:
 Sobre legislação de garantias:
 
 Hipoteca, alienação fiduciária, penhor e aval são modalidades
@@ -644,10 +911,13 @@ diferentes com efeitos jurídicos distintos em caso de atraso.
 sua situação.
 
 [0] 🤝 Agendar com especialista
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 32 - MENU6
-    MENU6: `Mohsis:
+ESTADO 32: MENU6 (DECISÕES DA JUSTIÇA FAVORÁVEIS)
+Copy
+STATE: MENU6
+
+Mohsis:
 ⚖️ Decisões da Justiça favoráveis aos produtores rurais
 
 Veja como a Justiça tem protegido produtores em situações
@@ -658,10 +928,13 @@ entender seus direitos.
 [2] 🌦️ Safra prejudicada por condições climáticas
 [0] 🤝 Quero agendar análise do meu caso
 
-[V] Voltar  [M] Menu inicial  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu inicial  [S] Sair  [P] Privacidade
 
-    // 33 - M6PRORROGACAO
-    M6PRORROGACAO: `Mohsis:
+ESTADO 33: M6PRORROGACAO (PRORROGAÇÃO E ALONGAMENTO)
+Copy
+STATE: M6PRORROGACAO
+
+Mohsis:
 ⚖️ Decisões sobre prorrogação e alongamento de dívidas
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -737,10 +1010,13 @@ do devedor nos termos da lei."
 [7] 📚 Ver exemplos de casos práticos
 [0] 🤝 Agendar análise do meu caso
 
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 34 - M6CLIMA
-    M6CLIMA: `Mohsis:
+ESTADO 34: M6CLIMA (SAFRA PREJUDICADA POR CLIMA)
+Copy
+STATE: M6CLIMA
+
+Mohsis:
 ⚖️ Decisões sobre safra prejudicada por condições climáticas
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -827,10 +1103,13 @@ Decisão: TJ-SC, Apelação Cível 0000166-29.2008.8.24.0189
 [7] 📚 Ver exemplos de casos práticos
 [0] 🤝 Agendar análise do meu caso
 
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 35 - MENU7
-    MENU7: `Mohsis:
+ESTADO 35: MENU7 (EXEMPLOS HIPOTÉTICOS)
+Copy
+STATE: MENU7
+
+Mohsis:
 📚 Exemplos de casos que deram certo na Justiça
 
 Veja situações reais de produtores que enfrentaram problemas
@@ -846,10 +1125,13 @@ semelhantes aos seus e como a Justiça resolveu.
 [8] 📋 A burocracia do PROAGRO e a comunicação da perda
 [0] 🤝 Quero agendar análise do meu caso
 
-[V] Voltar  [M] Menu inicial  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu inicial  [S] Sair  [P] Privacidade
 
-    // 36 - M7CASO1
-    M7CASO1: `Mohsis:
+ESTADO 36: M7CASO1 (A SECA INESPERADA NA SOJA)
+Copy
+STATE: M7CASO1
+
+Mohsis:
 📚 CASO 1: A Seca Inesperada na Soja
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -891,10 +1173,13 @@ TJ-MG (AI 1795475-48.2024.8.13.0000)
 [7] 📋 Ver todos os casos
 [0] 🤝 Agendar análise do meu caso
 
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 37 - M7CASO2
-    M7CASO2: `Mohsis:
+ESTADO 37: M7CASO2 (O CONTRATO "DISFARÇADO")
+Copy
+STATE: M7CASO2
+
+Mohsis:
 📚 CASO 2: O Contrato "Disfarçado" e a Geada no Café
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -935,10 +1220,13 @@ TJ-MT (AC 0002297-74.2014.8.11.0044)
 [7] 📋 Ver todos os casos
 [0] 🤝 Agendar análise do meu caso
 
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 38 - M7CASO3
-    M7CASO3: `Mohsis:
+ESTADO 38: M7CASO3 (O PRODUTOR PREVENIDO)
+Copy
+STATE: M7CASO3
+
+Mohsis:
 📚 CASO 3: O Produtor Prevenido e o Excesso de Chuvas
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -983,10 +1271,13 @@ Decisão de referência: TJ-PR (AI 0084820-91.2024.8.16.0000)
 [7] 📋 Ver todos os casos
 [0] 🤝 Agendar análise do meu caso
 
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 39 - M7CASO4
-    M7CASO4: `Mohsis:
+ESTADO 39: M7CASO4 (O BENEFÍCIO DA AÇÃO COLETIVA)
+Copy
+STATE: M7CASO4
+
+Mohsis:
 📚 CASO 4: O Benefício da Ação Coletiva
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1026,10 +1317,13 @@ Decisão de referência: TJ-MG (AC 5000740-58.2019.8.13.0327)
 [7] 📋 Ver todos os casos
 [0] 🤝 Agendar análise do meu caso
 
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 40 - M7CASO5
-    M7CASO5: `Mohsis:
+ESTADO 40: M7CASO5 (A IMPENHORABILIDADE)
+Copy
+STATE: M7CASO5
+
+Mohsis:
 📚 CASO 5: A Impenhorabilidade da Pequena Propriedade Rural
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1072,10 +1366,13 @@ Nulidade da penhora. Extinção da execução sobre o imóvel.
 [7] 📋 Ver todos os casos
 [0] 🤝 Agendar análise do meu caso
 
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 41 - M7CASO6
-    M7CASO6: `Mohsis:
+ESTADO 41: M7CASO6 (REVISÃO DE CONTRATO)
+Copy
+STATE: M7CASO6
+
+Mohsis:
 📚 CASO 6: Revisão de Contrato por Evento Imprevisível
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1123,10 +1420,13 @@ uma das partes.
 [7] 📋 Ver todos os casos
 [0] 🤝 Agendar análise do meu caso
 
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 42 - M7CASO7
-    M7CASO7: `Mohsis:
+ESTADO 42: M7CASO7 (A NEGATIVA DO SEGURO)
+Copy
+STATE: M7CASO7
+
+Mohsis:
 📚 CASO 7: A Negativa do Seguro por Detalhe Técnico Irrelevante
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1174,10 +1474,13 @@ Decisão de referência: TJ-PR (AC 0001047-95.2023.8.16.0126)
 [7] 📋 Ver todos os casos
 [0] 🤝 Agendar análise do meu caso
 
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 43 - M7CASO8
-    M7CASO8: `Mohsis:
+ESTADO 43: M7CASO8 (A BUROCRACIA DO PROAGRO)
+Copy
+STATE: M7CASO8
+
+Mohsis:
 📚 CASO 8: A Burocracia do PROAGRO e a Comunicação da Perda
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1223,10 +1526,13 @@ Decisão de referência: TRF-4 (AC 5001027-52.2018.4.04.7210)
 [7] 📋 Ver todos os casos
 [0] 🤝 Agendar análise do meu caso
 
-[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade`,
+[V] Voltar  [M] Menu  [S] Sair  [P] Privacidade
 
-    // 44 - PRIVACIDADE
-    PRIVACIDADE: `Mohsis:
+ESTADO 44: PRIVACIDADE (POLÍTICA DE PRIVACIDADE COMPLETA)
+Copy
+STATE: PRIVACIDADE
+
+Mohsis:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 POLÍTICA DE PRIVACIDADE — [NOME DO ESCRITÓRIO]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1281,128 +1587,283 @@ Para exercer seus direitos: [dpo@escritorio.com]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[V] Voltar  [M] Menu  [S] Sair`,
+[V] Voltar  [M] Menu  [S] Sair
 
-    // 45 - TERMO_AGENDAMENTO
-    TERMO_AGENDAMENTO: `Mohsis:
+ESTADO 45: TERMO_AGENDAMENTO (TRANSPARÊNCIA COMERCIAL)
+Copy
+STATE: TERMO_AGENDAMENTO
+
+Mohsis:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ENCAMINHAMENTO PARA CONSULTA ESPECIALIZADA
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Você solicitou falar com um especialista.
+Você está sendo direcionado para atendimento do 
+[Nome do Escritório], escritório especializado em 
+Direito Agrário e Bancário.
 
-Para darmos seguimento, preciso coletar algumas informações
-básicas que serão analisadas pela nossa equipe jurídica.
+SOBRE O ATENDIMENTO:
+• Primeira consulta: análise de viabilidade e estratégia inicial
+• Duração: aproximadamente 60 minutos
+• Modalidade: presencial ou videoconferência (WhatsApp)
+• Investimento: será informado no momento do contato
+• Prazo de retorno: até 24 horas úteis para proposta de horário
 
-Este procedimento não cria vínculo contratual imediato,
-mas serve para organizar o seu futuro atendimento.
+NATUREZA DO SERVIÇO:
+A partir deste momento, o atendimento deixa de ser informativo
+e passa a ser assessoria jurídica profissional, com possível
+estabelecimento de vínculo advocatício se houver contratação.
 
-[1] ✅ ACEITO E QUERO PROSSEGUIR
-[V] VOLTAR`,
+⚠️ IMPORTANTE:
+• NÃO envie documentos por este WhatsApp
+• O retorno virá deste mesmo número, por advogado identificado
+• Verifique sempre nome e número OAB do profissional
 
-    // 46 - CONSENTIMENTO_LGPD
-    CONSENTIMENTO_LGPD: `Mohsis:
-✅ Consentimento: Você autoriza o tratamento dos seus dados
-pela nossa equipe para fins de agendamento jurídico?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[1] SIM, EU AUTORIZO
-[2] NÃO, QUERO VOLTAR AO MENU`,
+[1] QUERO AGENDAR COM O ESCRITÓRIO
+[V] VOLTAR AO MENU (continuar navegando gratuitamente)
 
-    // 47 - AGENDAMENTO_COLETA
-    AGENDAMENTO_COLETA: `Mohsis:
+ESTADO 46: CONSENTIMENTO_LGPD (CONSENTIMENTO ESPECÍFICO)
+Copy
+STATE: CONSENTIMENTO_LGPD
+
+Mohsis:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CONSENTIMENTO PARA CONTATO — LGPD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Antes de prosseguir, preciso do seu consentimento específico:
+
+FINALIDADE: Agendamento de consulta jurídica com o [Nome do Escritório]
+DADOS: Nome completo, telefone, município da propriedade, tema do atendimento
+BASE LEGAL: Consentimento (art. 7º, I, LGPD)
+
+SEUS DIREITOS:
+• Acessar, corrigir ou excluir seus dados
+• Revogar consentimento a qualquer momento
+• Solicitar informações sobre tratamento
+
+O escritório entrará em contato em até 24 horas úteis para
+proposta de data, horário e informações sobre investimento.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ACEITO] Concordo com a coleta para esta finalidade específica
+[NÃO ACEITO] Prefiro não prosseguir (voltar ao menu inicial)
+
+ESTADO 47: AGENDAMENTO_COLETA (COLETA DE DADOS)
+Copy
+STATE: AGENDAMENTO_COLETA
+
+Mohsis:
 Vamos organizar seu agendamento.
 
-Por favor, digite seu **NOME COMPLETO**:`,
+Qual seu nome completo?
 
-    // AGENDAMENTO_CIDADE
-    AGENDAMENTO_CIDADE: `Mohsis:
-Obrigado! Agora, digite o **MUNICÍPIO e ESTADO (UF)** da sua propriedade:`,
+[Aguarda resposta]
 
-    // AGENDAMENTO_URGENCIA
-    AGENDAMENTO_URGENCIA: `Mohsis:
-Há alguma **urgência imediata** (ex: prazo judicial vencendo hoje ou amanhã)?
+Qual município e estado da propriedade?
 
-[1] SIM
-[2] NÃO`,
+[Aguarda resposta]
 
-    // 48 - CONFIRMACAO_DADOS
-    CONFIRMACAO_DADOS: `Mohsis:
-📝 **CONFIRME SEUS DADOS PARA O AGENDAMENTO:**
+Qual tema principal?
+[1] Dívida/renegociação
+[2] Alongamento de prazos
+[3] Proteção patrimonial
+[4] Regularidade ambiental
+[5] Outro
+
+Há urgência (prazo judicial, notificação formal)?
+[S] Sim - Prazo curto
+[N] Não - Situação regular
+
+[CONFIRMAR DADOS]
+
+ESTADO 48: CONFIRMACAO_DADOS (CONFIRMAÇÃO DOS DADOS COLETADOS)
+Copy
+STATE: CONFIRMACAO_DADOS
+
+Mohsis:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CONFIRME SEUS DADOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Nome: {{nome}}
-Localização: {{municipio}}
+Município/Estado: {{municipio}}/{{uf}}
 Tema: {{tema}}
 Urgência: {{urgencia}}
 
-[1] TUDO CORRETO, PODE ENVIAR
-[2] PRECISO CORRIGIR ALGO`,
+Prazo de retorno: {{prazo_retorno}}
 
-    // 49 - HANDOFFCONFIRM
-    HANDOFFCONFIRM: `Mohsis:
-✅ **SOLICITAÇÃO ENCAMINHADA COM SUCESSO!**
-Protocolo: MOH-2025-{{protocolo}}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Um advogado da equipe do Dr. Júnior Lopes entrará em contato
-em breve para dar seguimento ao seu atendimento.
+Os dados estão corretos?
 
-Por favor, aguarde nosso retorno neste número.
+[CONFIRMAR] Sim, prosseguir com agendamento
+[CORRIGIR] Não, quero corrigir
+[VOLTAR] Voltar ao menu inicial
 
-[M] MENU INICIAL
-[S] SAIR`,
+ESTADO 49: HANDOFFCONFIRM (CONFIRMAÇÃO DE ENCAMINHAMENTO)
+Copy
+STATE: HANDOFFCONFIRM
 
-    // 50 - POS_AGENDAMENTO
-    POS_AGENDAMENTO: `Mohsis:
-Seu agendamento já foi encaminhado. Em breve nossa equipe entrará em contato.
-Deseja ver mais algum tema informativo enquanto aguarda?
+Mohsis:
+✅ SOLICITAÇÃO ENCAMINHADA AO ESCRITÓRIO
 
-[M] MENU INICIAL
-[S] SAIR`,
+Protocolo: MOH-2025-XXXXXX
 
-    // 51 - SAIR
-    SAIR: `Mohsis:
-Tudo bem. Encerrando por aqui. 👋
-O Dr. Júnior Lopes e sua equipe agradecem o contato.
-Caso precise de algo no futuro, basta mandar um "Oi" ou "M".`,
+Resumo para nossa equipe:
+• Nome: {{nome}}
+• Local: {{municipio}}/{{uf}}
+• Tema: {{tema}}
+• Urgência: {{urgencia}}
 
-    // 52 - APAGAR_SOLICITACAO
-    APAGAR_SOLICITACAO: `Mohsis:
-Certo. Você deseja apagar todas as informações fornecidas
-nesta conversa conforme o direito de exclusão da LGPD?
+⏱️ Nosso advogado retornará em até {{prazo_retorno}} com:
+  - Proposta de data e horário
+  - Informações sobre investimento da consulta
+  - Instruções para envio seguro de documentos (se necessário)
 
-[1] SIM, APAGAR TUDO
-[2] NÃO, MANTER`,
+⚠️ IMPORTANTE:
+• NÃO envie documentos por este WhatsApp agora
+• O retorno virá deste mesmo número ([Número do Escritório])
+• Verifique sempre a identificação do profissional (Nome + OAB)
+• O protocolo MOH-2025-XXXXXX vincula sua solicitação ao escritório
 
-    // 53 - APAGAR_CONFIRMADO
-    APAGAR_CONFIRMADO: `Mohsis:
-✅ Dados excluídos dos nossos registros temporários.
-Concluído com sucesso. 👋`,
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-    // 54 - ERRO_ENTRADA
-    ERRO_ENTRADA: `Mohsis:
-⚠️ Não entendi sua resposta.
+Enquanto aguarda, posso ajudar em mais alguma informação geral?
 
-Para eu te orientar com segurança, por favor escolha uma das
-opções numeradas do menu ou use um dos comandos:
+[M] Menu principal (novo tema)
+[S] Sair do atendimento
 
-[M] Menu  [V] Voltar  [0] Especialista  [S] Sair`,
+ESTADO 50: POS_AGENDAMENTO (PÓS-AGENDAMENTO — BLOQUEIO)
+Copy
+STATE: POS_AGENDAMENTO
 
-    // 55 - LOOP_PROTECAO
-    LOOP_PROTECAO: `Mohsis:
-⚠️ Identifiquei muitas mensagens em sequência.
+[Disparado automaticamente após HANDOFFCONFIRM se usuário tentar:
+ - Enviar documento/imagem
+ - Perguntar sobre caso específico
+ - Solicitar nova ação]
 
-Por segurança, preciso garantir que você é um produtor rural
-buscando informação.
+Mohsis:
+⚠️ ATENÇÃO
 
-Deseja continuar a navegação?
+Seu agendamento já foi registrado (Protocolo: MOH-2025-XXXXXX).
 
-[1] SIM
-[S] SAIR`,
+Não posso mais receber:
+• Documentos ou imagens
+• Informações sobre seu caso específico
+• Solicitações de nova ação
 
-    FALLBACK_ANY: `Mohsis:
-Para eu te orientar com segurança, por favor escolha uma das
-opções numeradas do menu ou use um dos comandos:
+⏱️ Aguarde o contato do advogado em até {{prazo_retorno}} úteis.
 
-M (Menu) | V (Voltar) | 0 (Especialista) | S (Sair) | P (Privacidade)`
-};
+Se precisar de atendimento imediato sobre OUTRO tema, use:
+[M] Menu principal
 
-module.exports = { STATE_TEXTS };
+Para encerrar: [S] Sair
+
+ESTADO 51: SAIR (ENCERRAMENTO)
+Copy
+STATE: SAIR
+
+Mohsis:
+Atendimento encerrado. 👋
+
+Para retomar, envie qualquer mensagem.
+
+[Nova mensagem do usuário dispara PRIMEIRO_CONTATO ou START,
+dependendo da configuração de sessão]
+
+ESTADO 52: APAGAR_SOLICITACAO (SOLICITAÇÃO DE EXCLUSÃO LGPD)
+Copy
+STATE: APAGAR_SOLICITACAO
+
+Mohsis:
+Solicitação de exclusão de dados recebida.
+
+Para segurança, preciso confirmar sua identidade:
+
+1. Últimos 4 dígitos do CPF informado no agendamento: ____
+2. Município da propriedade registrado: ____
+
+[CONFIRMAR] Após preencher
+[CANCELAR] Para manter os dados
+
+⚠️ Prazo de atendimento: 15 dias úteis (LGPD).
+
+ESTADO 53: APAGAR_CONFIRMADO (CONFIRMAÇÃO DE EXCLUSÃO)
+Copy
+STATE: APAGAR_CONFIRMADO
+
+Mohsis:
+✅ Solicitação de exclusão registrada.
+
+Protocolo: MOH-2025-XXXXXX-DEL
+
+Prazo de atendimento: 15 dias úteis.
+
+Você receberá confirmação no e-mail cadastrado (se informado)
+ou por este WhatsApp.
+
+Para novo atendimento, envie qualquer mensagem.
+
+ESTADO 54: ERRO_ENTRADA (TRATAMENTO DE ERRO)
+Copy
+STATE: ERRO_ENTRADA
+
+[Disparado quando usuário digita opção não disponível no menu]
+
+Mohsis:
+Não entendi. Por favor, escolha uma das opções disponíveis:
+
+[repete menu atual com numeração clara]
+
+Dica: responda apenas com o número da opção desejada.
+
+ESTADO 55: LOOP_PROTECAO (PROTEÇÃO CONTRA SPAM)
+Copy
+STATE: LOOP_PROTECAO
+
+[Disparado após 3 entradas inválidas consecutivas em ERRO_ENTRADA]
+
+Mohsis:
+Parece que estamos com dificuldade de comunicação.
+
+Posso ajudar de outra forma:
+
+[0] Quero falar com atendente humano
+[S] Encerrar e tentar mais tarde
+
+Se persistir o problema, ligue diretamente:
+📞 (XX) XXXX-XXXX
+
+🔀 REGRAS DE NAVEGAÇÃO GLOBAL
+Comandos universais válidos em todos os estados:
+Table
+Copy
+Comando
+Ação
+Destino
+[M] ou MENU
+Menu principal
+START
+[S] ou SAIR
+Encerrar
+SAIR
+[P] ou PRIVACIDADE
+Política de privacidade
+PRIVACIDADE
+[V] ou VOLTAR
+Estado anterior
+Pilha de estados*
+[0]
+Atendimento especialista
+TERMO_AGENDAMENTO
+*Se pilha de estados não for tecnicamente viável, [V] retorna ao menu do nível superior.
+Tratamento de entrada inválida:
+Copy
+1ª entrada inválida → ERRO_ENTRADA (repete menu)
+2ª entrada inválida → ERRO_ENTRADA (repete menu + dica)
+3ª entrada inválida → LOOP_PROTECAO (oferece humano ou sair)
+
